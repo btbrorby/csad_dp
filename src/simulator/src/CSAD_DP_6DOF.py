@@ -148,3 +148,5 @@ class ThrusterDynamics:
 
 
 
+def loop():
+    return 0
