@@ -1,0 +1,3 @@
+[submodule "src/motion_capture_system"]
+	path = src/motion_capture_system
+	url = https://github.com/btbrorby/motion_capture_system.git
