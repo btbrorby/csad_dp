@@ -1,0 +1,7 @@
+<launch>
+    <node name="gain_server" pkg = "gain_server" type="server.py" />
+    <node name="observer" pkg = "observer" type="obs_node.py" />
+    <node name="pid_controller" pkg="controller" type="pid_node.py" />
+    <node name="manual_controller" pkg="controller" type="ctrl_joy_node.py" />
+    <node name="thruster_allocation" pkg="thrust_allocation" type="thrust_node.py" output="screen" />
+</launch>
