@@ -2,6 +2,8 @@
 import rospy
 import os 
 import yaml
+from sensors import loop as loopSensor
+from CSAD_DP_6DOF import loop as loopCSAD
 #from ctypes.wintypes import MSG
 
 path = os.path.dirname(os.getcwd())
@@ -17,7 +19,9 @@ if __name__ == '__main__':
     
     while not rospy.is_shutdown():
         
-        #loop()
+        
+        loopCSAD()
+        loopSensor()
         r.sleep()
     
     #nodeEnd()

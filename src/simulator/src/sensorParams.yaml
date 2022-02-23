@@ -1,0 +1,21 @@
+imu_properties:
+  standardDeviation: 0.1
+  mean: 0
+
+imu_locations:
+  imu1:
+    x: -0.315
+    y: 0.0
+    z: 0.246
+  imu2:
+    x: 0.424
+    y: 0.167
+    z: 0.262
+  imu3:
+    x: 0.424
+    y: -0.167
+    z: 0.262
+  imu4:
+    x: -1.025
+    y: 0.0
+    z: -0.010
