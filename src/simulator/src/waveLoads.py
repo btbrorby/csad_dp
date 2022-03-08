@@ -26,7 +26,6 @@ class Wave():
         """
         Assuming deep water conditions, giving the wave number as a function of wave frequency
         """
-        
         return (frequency**2)/g
     
     
@@ -39,6 +38,15 @@ class Wave():
     def generateIrregular(self, time, x, y):
         phaseAngle = np.random.rand()
         
+        
+    def waveLoadsFirst(self):
+        return 0
+    
+    def waveLoadsSecond(self):
+        return 0
+    
+    def publishWaveLoads(self):
+        load = self.waveLoadsFirst() + self.waveLoadsSecond()
 
     
         
