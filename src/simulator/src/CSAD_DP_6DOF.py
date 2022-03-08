@@ -1,17 +1,12 @@
 #!/usr/bin/env python
 
-from email.utils import decode_rfc2231
 import math
-import random
-from re import M
-from tkinter import W
 import generateModelData_CSAD as data
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Float32MultiArray
 import rospy
 import numpy as np
 import math_tools
-import scipy
 
 #Time step for simulation
 dt = 0.01
