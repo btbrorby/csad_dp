@@ -1,6 +1,16 @@
 import numpy as np
 import math
 
+def ssa(angle):
+    """
+    Returns the smalles signed angle in [-pi, pi)
+    Args:
+        angle (float): Tha angle that will be wrapped inside [-pi, pi)
+    Returns:
+        float: The wrapped angle
+    """
+    angle = (angle + math.pi) % (2*math.pi) - math.pi
+    return angle
 
 def rad2pipi(x):
     y = np.arctan2(np.sin(x),np.cos(x))
@@ -108,5 +118,23 @@ def sqrt(x):
             count = count + 1
             
     return y
+
+def transformationMatrix(eta):
+        phi = eta[3]
+        theta = eta[4]
+        psi = eta[5]
+        J1 = np.array([[math.cos(psi)*math.cos(theta), -math.sin(phi)+math.cos(theta)+math.cos(phi)*math.sin(theta)*math.sin(phi), math.sin(psi)*math.sin(phi)+math.cos(psi)*math.cos(phi)*math.sin(theta)],
+                       [math.sin(psi)*math.cos(theta), math.cos(psi)*math.cos(phi)+math.sin(phi)*math.sin(theta)*math.sin(psi), -math.cos(psi)*math.sin(phi)+math.sin(theta)*math.sin(psi)*math.cos(phi)],
+                       [-math.sin(theta), math.cos(theta)*math.sin(phi), math.cos(theta)*math.cos(phi)]])
+        
+        
+        J2 = np.array([[1, math.sin(phi)*math.tan(theta), math.cos(phi)*math.tan(theta)],
+                       [0, math.cos(phi), -math.sin(phi)],
+                       [0, math.sin(phi)/math.cos(theta), math.cos(phi)/math.cos(theta)]])
+        zero = np.zeros([3, 3])
+        
+        J = np.hstack((np.vstack((J1, zero)), np.vstack((zero, J2))))
+        
+        return J
 
             

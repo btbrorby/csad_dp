@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 import math
 import generateModelData_CSAD as data
 from nav_msgs.msg import Odometry
@@ -6,7 +7,6 @@ from std_msgs.msg import Float32MultiArray
 import rospy
 import numpy as np
 import math_tools
-import scipy
 
 #Time step for simulation
 dt = 0.01
@@ -18,8 +18,14 @@ class CSAD:
         #Initialzing states
         self.eta = eta0
         self.nu = np.zeros(6)
+        self.bias = np.zeros(6)
         self.eta_dot = np.zeros(6)
         self.nu_dot = np.zeros(6)
+        self.bias_dot = np.zeros(6)
+        
+        self.T_b = np.zeros(6)  # Tuning bias
+        self.biasMean = 0.0     # Defining white noise
+        self.biasStd = 1.0      # Defining white noise
         
         #Initionalize thrust dynamics
         self.u = np.zeros(12)
@@ -54,6 +60,84 @@ class CSAD:
         self.odometry_msg.twist.twist.angular.x = self.nu[3]
         self.odometry_msg.twist.twist.angular.y = self.nu[4]
         self.odometry_msg.twist.twist.angular.z = self.nu[5]
+        
+    def setD(self, nu):
+        """
+        Calculates the damping matrix as function of nu.
+
+        Args:
+            nu (array): body fixed velocity
+
+        Returns:
+            Array: Damping matrix (6DOF), but currrently only surge, sway and yaw directions are calculated. This is due to restricted available data.
+        """
+        u = nu[0]
+        v = nu[1]
+        w = nu[2]
+        p = nu[3]
+        q = nu[4]
+        r = nu[5]
+        
+        d11 = data.Xu + data.Xuu*np.abs(u) + data.Xuuu*(u**2)
+        d22 = data.Yv + data.Yvv*np.abs(v) + data.Yvvv*(v**2) + data.Yrv*np.abs(r)
+        d26 = data.Yr + data.Yvr*np.abs(v) + data.Yrr*np.abs(r) + data.Yrrr*(r**2)
+        d62 = data.Nv + data.Nvv*np.abs(v) + data.Nvvv*(v**2) + data.Nrv*np.abs(r)
+        d66 = data.Nr + data.Nvr*np.abs(v) + data.Nrr*np.abs(r) + data.Nrrr*(r**2)
+        
+        D = np.zeros([6, 6])
+        D[0][0] = -d11
+        D[1][1] = -d22
+        D[1][5] = -d26
+        D[5][1] = -d62
+        D[5][5] = -d66
+        
+        return D
+        
+        
+    # def setC(self):
+        
+        
+    def updateStates(self, tauEnv, tauThr):
+        """
+        Based on the following model:
+        M_RB*nu_dot + M_a*nu_dot + C_RB(nu)*nu + C_A(nu_r)*nu_r + D(nu_r)*nu_r = tau_env + tau_thr
+        
+        But since this is a LF model, we can neglect the Coriolis and centripetal terms (very small).
+        
+        eta_dot = J(eta)*nu
+        bias_dot = -T_b*bias + w_b
+        M*nu_dot = -D_lin*nu +J(eta)^T * bias + tau_thr + tau_wave2
+        
+        According to Bjoernoe's OMAE paper, the bias includes also wave2, but we want this to be reflected by incomming waves!
+
+        Returns:
+            _type_: _description_
+        """
+        J = math_tools.transformationMatrix(self.eta)
+        self.eta_dot = np.matmul(J, self.nu)
+        
+        noise = np.random.normal(self.biasMean, self.biasStd, 6)
+        self.bias_dot = np.matmul(-self.T_b,self.bias) + noise
+        
+        M = data.MRB + data.MA
+        Minv = np.linalg.inv(M)
+        D = self.setD(self.nu)
+        
+        self.nu_dot = np.matmul(Minv, np.matmul(-D, self.nu) + np.matmul(np.transpose(J), self.bias) + tauEnv + tauThr)
+        
+        # Euler integration:
+        self.eta += self.eta_dot*dt
+        self.eta[5] = math_tools.ssa(self.eta[5])
+        self.nu += self.nu_dot*dt
+        self.bias += self.bias_dot*dt
+        
+        
+        
+        return 0
+    
+    
+        
+        
         
       
 #This class should maybe be in separate python file?
@@ -144,7 +228,6 @@ class ThrusterDynamics:
     # alpha_dot <= 2 [1/s] propeller rotation speed
     # Saturate min and max values of thrust (max thrust is 1.5[N])
         
-  
 
 
 
