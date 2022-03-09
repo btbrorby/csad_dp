@@ -1,15 +1,17 @@
 #!/usr/bin/env python
 
-from glob import glob
-from re import X
+from cmath import pi
 import numpy as np
 import math
 import math_tools
 from generateModelData_CSAD import g
+from scipy import optimize as opt
+
+
 
 
 class Wave():
-    def __init__(self, dt, angle, Hs, Tp, regular=True):
+    def __init__(self, Hs, Tp, waterDepth=np.infty, angle=0, regular=True, dt=0.01):
         
         self.dt = dt
         
@@ -18,21 +20,53 @@ class Wave():
         self.angle = angle
         self.frequency = 2*math.pi/Tp
         
+        self.waterDepth = waterDepth
+        #Initial guess for wave number:
+        self.k = self.getWaveNumber(deepWater=True)
     
         self.regular = regular #True = regular, False = irregular
         
+        self.time = 0
         
-    def getWaveNumber(self, frequency):
+    
+       
+    def checkDeepWaterConditions(self):
         """
-        Assuming deep water conditions, giving the wave number as a function of wave frequency
+        Checks whether deep water conditionas are valid.
         """
-        return (frequency**2)/g
+        if ((self.waterDepth*(self.frequency**2))/(g*2*pi) >= 0.5):
+            deepWater = False
+        else:
+            deepWater = True
+        return deepWater
+        
+    def getWaveNumber(self, deepWater=True, waterDepth=np.infty):
+        """
+        Estimates the wave number based on the dispertion relation.
+        """
+        if (deepWater==False):
+            f = g*self.k*np.math.tanh(self.k*waterDepth) - self.frequency**2
+            while (np.abs(f) >= 0.1):
+                self.k += 0.0001
+                f = g*self.k*np.math.tanh(self.k*waterDepth) - self.frequency**2
+                
+            return self.k
+        else:
+            return (self.frequency**2)/g
     
     
-    def generateRegular(self, time, x):
+    def generateRegular(self, x=0):
+        
+        
+        
         amplitude = self.Hs/2
-        k = self.getWaveNumber(self.frequency)
-        surfaceHeight = amplitude*math.sin(self.frequency*time - k*x)
+        
+        deepWaterCondition = self.checkDeepWaterConditions()
+        k = self.getWaveNumber(self.frequency, deepWater=deepWaterCondition)
+        
+        surfaceHeight = amplitude*math.cos(self.frequency*self.time - k*x)
+        
+        self.time += self.dt
         return surfaceHeight
         
     def generateIrregular(self, time, x, y):
@@ -50,4 +84,5 @@ class Wave():
 
     
         
-    
+obj = Wave(0.5, 1)
+print(obj.getWaveNumber(shallowWater=True, waterDepth=0.2))
