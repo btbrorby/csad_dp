@@ -4,8 +4,9 @@ from cmath import pi
 import numpy as np
 import math
 import math_tools
-from generateModelData_CSAD import g
 from scipy import optimize as opt
+import generateModelData_CSAD as data
+import matplotlib.pyplot as plt
 
 
 
@@ -34,41 +35,50 @@ class Wave():
         """
         Checks whether deep water conditionas are valid.
         """
-        if ((self.waterDepth*(self.frequency**2))/(g*2*pi) >= 0.5):
+        if ((self.waterDepth*(self.frequency**2))/(data.g*2*pi) >= 0.5):
             deepWater = False
         else:
             deepWater = True
         return deepWater
         
-    def getWaveNumber(self, deepWater=True, waterDepth=np.infty):
+    def getWaveNumber(self, deepWater=True):
         """
         Estimates the wave number based on the dispertion relation.
         """
         if (deepWater==False):
-            f = g*self.k*np.math.tanh(self.k*waterDepth) - self.frequency**2
+            f = data.g*self.k*np.math.tanh(self.k*self.waterDepth) - self.frequency**2
             while (np.abs(f) >= 0.1):
                 self.k += 0.0001
-                f = g*self.k*np.math.tanh(self.k*waterDepth) - self.frequency**2
+                f = data.g*self.k*np.math.tanh(self.k*self.waterDepth) - self.frequency**2
                 
             return self.k
         else:
-            return (self.frequency**2)/g
+            return (self.frequency**2)/data.g
     
     
-    def generateRegular(self, x=0):
+    def generateWave(self, x=0):
+        
+        if (self.regular==True): #Regular
+            amplitude = self.Hs/2
+        
+            deepWaterCondition = self.checkDeepWaterConditions()
+            k = self.getWaveNumber(deepWater=deepWaterCondition)
+
+            waveElevation = amplitude*math.cos(self.frequency*self.time - k*x)
+
+            self.time += self.dt
+            
+        else: #Irregular
+            waveElevation = 0
+            
+        return waveElevation
         
         
-        
-        amplitude = self.Hs/2
-        
-        deepWaterCondition = self.checkDeepWaterConditions()
-        k = self.getWaveNumber(self.frequency, deepWater=deepWaterCondition)
-        
-        surfaceHeight = amplitude*math.cos(self.frequency*self.time - k*x)
-        
-        self.time += self.dt
-        return surfaceHeight
-        
+    def FroudeKrylov(self):
+        waveElevation=self.generateWave()
+        return data.S*data.rho*data.g*waveElevation
+    
+    
     def generateIrregular(self, time, x, y):
         phaseAngle = np.random.rand()
         
@@ -83,6 +93,30 @@ class Wave():
         load = self.waveLoadsFirst() + self.waveLoadsSecond()
 
     
+    
+#For testing:
         
 obj = Wave(0.5, 1)
-print(obj.getWaveNumber(shallowWater=True, waterDepth=0.2))
+t = 0
+dt = 0.1
+fig = plt.figure()
+
+time=[]
+elev=[]
+force = []
+count = 0
+while (t < 10):
+    
+    elev.append(obj.generateWave())
+    force.append(obj.FroudeKrylov())
+    time.append(t)
+    print(elev)
+    t += dt
+    count +=1
+    
+plt.plot(time, elev)
+plt.plot(time, force)
+
+
+    
+plt.show()
