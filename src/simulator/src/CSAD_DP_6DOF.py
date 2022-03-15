@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 
 import math
+import string
 import generateModelData_CSAD as data
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Float32MultiArray
 import rospy
 import numpy as np
 import math_tools
+from matplotlib import pyplot
 
 #Time step for simulation
 dt = 0.01
@@ -15,6 +17,8 @@ class CSAD:
     
     
     def __init__(self, eta0):
+        self.time = 0
+        
         #Initialzing states
         self.eta = eta0
         self.nu = np.zeros(6)
@@ -23,7 +27,7 @@ class CSAD:
         self.nu_dot = np.zeros(6)
         self.bias_dot = np.zeros(6)
         
-        self.T_b = np.zeros(6)  # Tuning bias
+        self.T_b = 0.1*np.ones(6)   # Tuning bias
         self.biasMean = 0.0     # Defining white noise
         self.biasStd = 1.0      # Defining white noise
         
@@ -42,6 +46,36 @@ class CSAD:
         self.sub_u = rospy.Subscriber('/CSAD/u', Float32MultiArray, queue_size=1)
         
         
+        # For plotting:
+        self.timeVec = []
+        
+        self.xVec = []
+        self.yVec = []
+        self.zVec = []
+        self.phiVec = []
+        self.thetaVec = []
+        self.psiVec = []
+        self.thrustLoadVec = []
+    
+     
+    def saveData(self):
+        # For plotting:
+        self.timeVec.append(self.time)
+        self.xVec.append(self.eta[0])
+        self.yVec.append(self.eta[1])
+        self.zVec.append(self.eta[2])
+        self.phiVec.append(self.eta[3])
+        self.thetaVec.append(self.eta[4])
+        self.psiVec.append(self.eta[5])
+        self.thrustLoadVec.append(self.thrustDynamics.loads)
+        
+        #To file:
+        
+        
+        
+    
+        
+
     
     
     def nav_msg(self):
@@ -92,6 +126,8 @@ class CSAD:
         D[5][5] = -d66
         
         return D
+    
+   
         
         
     # def setC(self):
@@ -131,11 +167,11 @@ class CSAD:
         self.nu += self.nu_dot*dt
         self.bias += self.bias_dot*dt
         
-        
-        
+        self.saveData()
+        self.time += dt
         return 0
     
-    
+   
         
         
         
@@ -229,6 +265,39 @@ class ThrusterDynamics:
     # Saturate min and max values of thrust (max thrust is 1.5[N])
         
 
+    
+
+
+eta0 = np.zeros(6)
+vessel = CSAD(eta0)
+
+envLoad = np.zeros(6)
+thrLoad = np.zeros(6)
+w = 0.1
+
+t = []
+x = []
+y = []
+load = []
+
+
+while vessel.time < 50:
+    
+    envLoad[0] = math.cos(w*vessel.time)
+    vessel.updateStates(envLoad, thrLoad)
+    load.append(envLoad[0])
+    
+
+
+fig = pyplot.figure()
+pyplot.plot(vessel.timeVec,vessel.xVec)
+pyplot.plot(vessel.timeVec,load)
+pyplot.show()
+
+
+
+
+    
 
 
 def loop():

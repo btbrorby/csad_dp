@@ -48,6 +48,10 @@ A = vessel['A']                     # ?
 B = vessel['B']                     # ?
 C = vessel['C']                     # ?
 
+RAO_FORCE = vessel['forceRAO']
+RAO_MOTION = vessel['motionRAO']
+driftForce = vessel['driftfrc']
+
 rho = vessel['main']['g']           # water density
 g = 9.81                            # Acceleration of gravity
 
