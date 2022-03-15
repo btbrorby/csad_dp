@@ -96,7 +96,7 @@ class Wave():
     
 #For testing:
         
-obj = Wave(0.5, 1)
+obj = Wave(0.09/2, 1)
 t = 0
 dt = 0.1
 fig = plt.figure()
@@ -110,7 +110,6 @@ while (t < 10):
     elev.append(obj.generateWave())
     force.append(obj.FroudeKrylov())
     time.append(t)
-    print(elev)
     t += dt
     count +=1
     
