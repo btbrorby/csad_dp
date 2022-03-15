@@ -44,13 +44,20 @@ S = vessel['main']['S']             # Wetted surface
 MRB = vesselABC['MRB']              # Rigid body system inertia matrix
 MA = vesselABC['MA']                # Added mass matrix
 
-A = vessel['A']                     # ?
-B = vessel['B']                     # ?
-C = vessel['C']                     # ?
+A = vessel['A']                     # Added mass 6DOF for 47 frequencies
+B = vessel['B']                     # Potential + viscous damping 6DOF for 47 frequencies
+C = vessel['C']                     # Restoring forces 6DOF for 47 frequencies
+frequencies = vessel['freqs']       # Frequencies defined for A, B and C
 
 RAO_FORCE = vessel['forceRAO']
 RAO_MOTION = vessel['motionRAO']
-driftForce = vessel['driftfrc']
+
+headingsData = vessel['headings']
+driftForceFreq = vessel['driftfrc']['w']
+driftForceAmpX = vessel['driftfrc']['amp'][0][:,:,0]
+driftForceAmpY = vessel['driftfrc']['amp'][1][:,:,0]
+driftForceAmpPsi = vessel['driftfrc']['amp'][2][:,:,0]
+
 
 rho = vessel['main']['g']           # water density
 g = 9.81                            # Acceleration of gravity

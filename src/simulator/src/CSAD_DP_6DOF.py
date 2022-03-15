@@ -1,14 +1,17 @@
 #!/usr/bin/env python
 
-import math
-import string
+from numpy import angle
 import generateModelData_CSAD as data
+from waveLoads import Wave
+import math_tools
+
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Float32MultiArray
+
 import rospy
 import numpy as np
-import math_tools
 from matplotlib import pyplot
+import math
 
 #Time step for simulation
 dt = 0.01
@@ -27,9 +30,9 @@ class CSAD:
         self.nu_dot = np.zeros(6)
         self.bias_dot = np.zeros(6)
         
-        self.T_b = 0.1*np.ones(6)   # Tuning bias
+        self.T_b = 0.001*np.ones(6)   # Tuning bias
         self.biasMean = 0.0     # Defining white noise
-        self.biasStd = 1.0      # Defining white noise
+        self.biasStd = 0.001      # Defining white noise
         
         #Initionalize thrust dynamics
         self.u = np.zeros(12)
@@ -59,7 +62,9 @@ class CSAD:
     
      
     def saveData(self):
-        # For plotting:
+        """
+        Creating vectors for plotting.
+        """
         self.timeVec.append(self.time)
         self.xVec.append(self.eta[0])
         self.yVec.append(self.eta[1])
@@ -69,14 +74,6 @@ class CSAD:
         self.psiVec.append(self.eta[5])
         self.thrustLoadVec.append(self.thrustDynamics.loads)
         
-        #To file:
-        
-        
-        
-    
-        
-
-    
     
     def nav_msg(self):
         quaternion = math_tools.euler2quat(self.eta[3], self.eta[4], self.eta[5])
@@ -95,7 +92,7 @@ class CSAD:
         self.odometry_msg.twist.twist.angular.y = self.nu[4]
         self.odometry_msg.twist.twist.angular.z = self.nu[5]
         
-    def setD(self, nu):
+    def getD(self, nu):
         """
         Calculates the damping matrix as function of nu.
 
@@ -130,7 +127,7 @@ class CSAD:
    
         
         
-    # def setC(self):
+    # def getC(self):
         
         
     def updateStates(self, tauEnv, tauThr):
@@ -157,10 +154,10 @@ class CSAD:
         
         M = data.MRB + data.MA
         Minv = np.linalg.inv(M)
-        D = self.setD(self.nu)
+        D = self.getD(self.nu)
         
-        self.nu_dot = np.matmul(Minv, np.matmul(-D, self.nu) + np.matmul(np.transpose(J), self.bias) + tauEnv + tauThr)
-        
+        self.nu_dot = np.matmul(Minv, np.matmul(-D, self.nu) + np.matmul(np.linalg.inv(J), self.bias) + tauEnv + tauThr)
+       
         # Euler integration:
         self.eta += self.eta_dot*dt
         self.eta[5] = math_tools.ssa(self.eta[5])
@@ -264,26 +261,25 @@ class ThrusterDynamics:
     # alpha_dot <= 2 [1/s] propeller rotation speed
     # Saturate min and max values of thrust (max thrust is 1.5[N])
         
+    def getThrustLoads(self):
+        return self.loads
 
     
 
 
 eta0 = np.zeros(6)
 vessel = CSAD(eta0)
-
 envLoad = np.zeros(6)
 thrLoad = np.zeros(6)
-w = 0.1
-
-t = []
-x = []
-y = []
 load = []
+w = 0.2
+print(data.driftForceFreq)
+print(np.shape(data.driftForceFreq))
 
 
-while vessel.time < 50:
+while vessel.time < 500:
     
-    envLoad[0] = math.cos(w*vessel.time)
+    envLoad[0] = 5*math.cos(w*vessel.time)
     vessel.updateStates(envLoad, thrLoad)
     load.append(envLoad[0])
     
@@ -291,14 +287,34 @@ while vessel.time < 50:
 
 fig = pyplot.figure()
 pyplot.plot(vessel.timeVec,vessel.xVec)
+pyplot.plot(vessel.timeVec,vessel.yVec)
 pyplot.plot(vessel.timeVec,load)
+pyplot.grid()
+# pyplot.plot(vessel.timeVec, vessel.zVec)  #This is weird!!
+#pyplot.plot(vessel.xVec, vessel.yVec)
 pyplot.show()
 
 
 
 
-    
+# Predefined objects:
+eta0 = np.zeros(6)
+vessel = CSAD(eta0)
+
+Hs = 0.01
+Tp = 0.01
+waveAngle = 0
+seastate = Wave(Hs, Tp, waveAngle, regular=True)
+seastate.setHeading(vessel.eta[5]) #Set heading must be called every time updateStates() are called!
 
 
 def loop():
+    # Update loads:
+    tauWave = seastate.getWaveLoads() #!
+    tauThrust = vessel.thrustDynamics.getThrustLoads()
+    #Update vessel dynamics:
+    vessel.updateStates(tauWave, tauThrust)
+    seastate.setHeading(vessel.eta[5])  #Set heading must be called every time updateStates() are called!
+    
+    
     return 0

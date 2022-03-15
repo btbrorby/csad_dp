@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 
 from cmath import pi
+from turtle import heading
 import numpy as np
 import math
+
+from numpy import angle
 import math_tools
 from scipy import optimize as opt
 import generateModelData_CSAD as data
@@ -18,33 +21,70 @@ class Wave():
         
         self.Hs = Hs
         self.Tp = Tp
-        self.angle = angle
+        self.angleWaveNED = angle
+        self.angleWaveBody= self.angleWaveNED
         self.frequency = 2*math.pi/Tp
+        
         
         self.waterDepth = waterDepth
         #Initial guess for wave number:
-        self.k = self.getWaveNumber(deepWater=True)
+        self.k = self.getWaveNumber(initial=True)
     
         self.regular = regular #True = regular, False = irregular
         
         self.time = 0
         
+    def setHeading(self, heading):
+        """
+        This function must be called every time the vessel state are updated!
+
+        Args:
+            heading (float): vessel's heading
+        """
+        self.angleWaveBody = self.angleWaveNED - heading
+        
+        
+        
+        
+    def getDriftLoads(self, waveFreq, angleWaveBody, waveAmplitude):
+        """
+        This function takes wavefrequency and angle as input and find corresponding wave drift coefficient [N/A^2] in a lookup table.
+        Returns wave drift load in 3DOF. These are based on Bjoernoe's data from CSAD.
+        """
+        headingIndex = np.argmin(np.abs(data.headingsData - angleWaveBody))
+        frequencyIndex = np.argmin(np.abs(data.driftForceFreq - waveFreq))
+        
+        driftCoefficient = np.array([data.driftForceAmpX[frequencyIndex, headingIndex],
+                            data.driftForceAmpY[frequencyIndex, headingIndex],
+                            data.driftForceAmpPsi[frequencyIndex, headingIndex]])
+        
+        driftLoads = driftCoefficient*(waveAmplitude**2)
+        return driftLoads
     
        
-    def checkDeepWaterConditions(self):
-        """
-        Checks whether deep water conditionas are valid.
-        """
-        if ((self.waterDepth*(self.frequency**2))/(data.g*2*pi) >= 0.5):
-            deepWater = False
-        else:
-            deepWater = True
-        return deepWater
+    def getFroudeKrylov(self):
+        waveElevation=self.generateWave()
+        load = data.S*data.rho*data.g*waveElevation
+        loadX = -load*np.math.cos(self.angleWaveBody)
+        loadY = -load*np.math.sin(self.angleWaveBody)
+        loadPsi = 0
+        return [loadX, loadY, loadPsi]
         
-    def getWaveNumber(self, deepWater=True):
+    def getWaveNumber(self, initial=False):
         """
         Estimates the wave number based on the dispertion relation.
         """
+        if (initial==False):
+            #Checks if deepwater assumptions are valid:
+            if ((self.waterDepth*(self.frequency**2))/(data.g*2*pi) >= 0.5):
+                deepWater = False
+            else:
+                deepWater = True
+        
+        else: #If initial == True
+            deepWater = True 
+       
+        
         if (deepWater==False):
             f = data.g*self.k*np.math.tanh(self.k*self.waterDepth) - self.frequency**2
             while (np.abs(f) >= 0.1):
@@ -61,8 +101,8 @@ class Wave():
         if (self.regular==True): #Regular
             amplitude = self.Hs/2
         
-            deepWaterCondition = self.checkDeepWaterConditions()
-            k = self.getWaveNumber(deepWater=deepWaterCondition)
+            
+            k = self.getWaveNumber()
 
             waveElevation = amplitude*math.cos(self.frequency*self.time - k*x)
 
@@ -74,32 +114,31 @@ class Wave():
         return waveElevation
         
         
-    def FroudeKrylov(self):
-        waveElevation=self.generateWave()
-        return data.S*data.rho*data.g*waveElevation
+    
     
     
     def generateIrregular(self, time, x, y):
+        #First generate a spectrum, then make time varying sea state!!!
         phaseAngle = np.random.rand()
         
+    
+    
+    def getWaveLoads(self):
+        #This function must rely on wheter there is a regular or irregular state!
+        driftLoads = self.getDriftLoads(self.frequency, self.angleWaveBody, self.Hs/2)
+        froudeKrylovLoads = self.getFroudeKrylov()
+        #slowlyVaryingLoads = ...
         
-    def waveLoadsFirst(self):
-        return 0
-    
-    def waveLoadsSecond(self):
-        return 0
-    
-    def publishWaveLoads(self):
-        load = self.waveLoadsFirst() + self.waveLoadsSecond()
-
-    
+        return driftLoads + froudeKrylovLoads # + slowlyVaryingLoads
     
 #For testing:
         
-obj = Wave(0.09/2, 1)
+obj = Wave(0.04*2, 1)
 t = 0
 dt = 0.1
 fig = plt.figure()
+
+print(obj.getDriftLoads(obj.frequency, obj.angleWaveBody, 0.04))
 
 time=[]
 elev=[]
@@ -108,7 +147,7 @@ count = 0
 while (t < 10):
     
     elev.append(obj.generateWave())
-    force.append(obj.FroudeKrylov())
+    force.append(obj.getFroudeKrylov())
     time.append(t)
     t += dt
     count +=1
@@ -118,4 +157,4 @@ plt.plot(time, force)
 
 
     
-plt.show()
+#plt.show()
