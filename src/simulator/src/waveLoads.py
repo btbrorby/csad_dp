@@ -21,6 +21,7 @@ class Wave():
         
         self.Hs = Hs
         self.Tp = Tp
+        self.amplitude = Hs/2
         self.angleWaveNED = angle
         self.angleWaveBody= self.angleWaveNED
         self.frequency = 2*math.pi/Tp
@@ -45,11 +46,39 @@ class Wave():
         
         
         
+    
+       
+    def getFirstOrderLoad(self, waveFreq, angleWaveBody, waveAmplitude):
         
+        headingIndex = np.argmin(np.abs(data.headingsData - angleWaveBody))
+        frequencyIndex = np.argmin(np.abs(data.frequencies - waveFreq))
+        forceAmp = np.array([data.RAO_FORCE['amp'][0][frequencyIndex, headingIndex,0],
+                             data.RAO_FORCE['amp'][1][frequencyIndex, headingIndex,0],
+                             data.RAO_FORCE['amp'][2][frequencyIndex, headingIndex,0],
+                             data.RAO_FORCE['amp'][3][frequencyIndex, headingIndex,0],
+                             data.RAO_FORCE['amp'][4][frequencyIndex, headingIndex,0],
+                             data.RAO_FORCE['amp'][5][frequencyIndex, headingIndex,0]])
+        forcePhase = np.array([data.RAO_FORCE['phase'][0][frequencyIndex, headingIndex,0],
+                              data.RAO_FORCE['phase'][1][frequencyIndex, headingIndex,0],
+                              data.RAO_FORCE['phase'][2][frequencyIndex, headingIndex,0],
+                              data.RAO_FORCE['phase'][3][frequencyIndex, headingIndex,0],
+                              data.RAO_FORCE['phase'][4][frequencyIndex, headingIndex,0],
+                              data.RAO_FORCE['phase'][5][frequencyIndex, headingIndex,0]])
+        
+        firstOrderLoad = forceAmp*waveAmplitude*np.cos(waveFreq*self.time + forcePhase)
+        
+        # waveElevation=self.generateWave()
+        # load = data.S*data.rho*data.g*waveElevation
+        # loadX = -load*np.math.cos(self.angleWaveBody)
+        # loadY = -load*np.math.sin(self.angleWaveBody)
+        # loadPsi = 0
+        #return [loadX, loadY, loadPsi]
+        return firstOrderLoad
+    
     def getDriftLoads(self, waveFreq, angleWaveBody, waveAmplitude):
         """
         This function takes wavefrequency and angle as input and find corresponding wave drift coefficient [N/A^2] in a lookup table.
-        Returns wave drift load in 3DOF. These are based on Bjoernoe's data from CSAD.
+        Returns wave drift load in 3DOF (output is 6DOF). These are based on Bjoernoe's data from CSAD.
         """
         headingIndex = np.argmin(np.abs(data.headingsData - angleWaveBody))
         frequencyIndex = np.argmin(np.abs(data.driftForceFreq - waveFreq))
@@ -59,16 +88,34 @@ class Wave():
                             data.driftForceAmpPsi[frequencyIndex, headingIndex]])
         
         driftLoads = driftCoefficient*(waveAmplitude**2)
+        driftLoads = math_tools.three2sixDof(driftLoads)
         return driftLoads
     
-       
-    def getFroudeKrylov(self):
-        waveElevation=self.generateWave()
-        load = data.S*data.rho*data.g*waveElevation
-        loadX = -load*np.math.cos(self.angleWaveBody)
-        loadY = -load*np.math.sin(self.angleWaveBody)
-        loadPsi = 0
-        return [loadX, loadY, loadPsi]
+    def getSlowlyVaryingLoads(self, waveFreq, angleWaveBody, waveAmplitude):
+        slowlyVaryingLoads = np.zeros(6)
+        return slowlyVaryingLoads
+        
+    def getWaveLoads(self):
+        """Outputs sum of wave loads in body frame
+
+        Returns:
+            array: sum of driftLoads, froudeKryolv and slowly varying wave loads
+        """
+        
+        #This function must rely on wheter there is a regular or irregular state!
+        #Regular waves:
+        
+        # if (self.regular == False):
+        #     self.generateIrregular(self.time)
+        
+        #If the regular==True:
+        firstOrderLoads = self.getFirstOrderLoad(self.frequency, self.angleWaveBody, self.amplitude)
+        driftLoads = self.getDriftLoads(self.frequency, self.angleWaveBody, self.amplitude)
+        slowlyVaryingLoads = self.getSlowlyVaryingLoads(self.frequency, self.angleWaveBody, self.amplitude)
+        self.time += self.dt
+        return driftLoads + firstOrderLoads # + slowlyVaryingLoads
+    
+    
         
     def getWaveNumber(self, initial=False):
         """
@@ -96,65 +143,33 @@ class Wave():
             return (self.frequency**2)/data.g
     
     
-    def generateWave(self, x=0):
+    # def generateWave(self, x=0):
         
-        if (self.regular==True): #Regular
-            amplitude = self.Hs/2
+    #     if (self.regular==True): #Regular
+    #         amplitude = self.Hs/2
         
             
-            k = self.getWaveNumber()
+    #         k = self.getWaveNumber()
 
-            waveElevation = amplitude*math.cos(self.frequency*self.time - k*x)
+    #         waveElevation = amplitude*math.cos(self.frequency*self.time - k*x)
 
-            self.time += self.dt
+    #         self.time += self.dt
             
-        else: #Irregular
-            waveElevation = 0
+    #     else: #Irregular
+    #         waveElevation = 0
             
-        return waveElevation
+    #     return waveElevation
         
         
     
     
     
-    def generateIrregular(self, time, x, y):
+    def generateIrregular(self, time):
+        
         #First generate a spectrum, then make time varying sea state!!!
         phaseAngle = np.random.rand()
         
     
     
-    def getWaveLoads(self):
-        #This function must rely on wheter there is a regular or irregular state!
-        driftLoads = self.getDriftLoads(self.frequency, self.angleWaveBody, self.Hs/2)
-        froudeKrylovLoads = self.getFroudeKrylov()
-        #slowlyVaryingLoads = ...
-        
-        return driftLoads + froudeKrylovLoads # + slowlyVaryingLoads
     
-#For testing:
-        
-obj = Wave(0.04*2, 1)
-t = 0
-dt = 0.1
-fig = plt.figure()
-
-print(obj.getDriftLoads(obj.frequency, obj.angleWaveBody, 0.04))
-
-time=[]
-elev=[]
-force = []
-count = 0
-while (t < 10):
     
-    elev.append(obj.generateWave())
-    force.append(obj.getFroudeKrylov())
-    time.append(t)
-    t += dt
-    count +=1
-    
-plt.plot(time, elev)
-plt.plot(time, force)
-
-
-    
-#plt.show()

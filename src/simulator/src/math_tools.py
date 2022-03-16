@@ -138,3 +138,20 @@ def transformationMatrix(eta):
         return J
 
             
+def three2sixDof(x):
+    y = []
+    y.append(x[0])
+    y.append(x[1])
+    y.append(0.0)
+    y.append(0.0)
+    y.append(0.0)
+    y.append(x[2])
+    return y
+
+def six2threeDof(x):
+    y = []
+    y.append(x[0])
+    y.append(x[1])
+    y.append(x[5])
+    return y
+    

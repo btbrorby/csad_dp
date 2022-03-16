@@ -59,8 +59,8 @@ driftForceAmpY = vessel['driftfrc']['amp'][1][:,:,0]
 driftForceAmpPsi = vessel['driftfrc']['amp'][2][:,:,0]
 
 
-rho = vessel['main']['g']           # water density
-g = 9.81                            # Acceleration of gravity
+rho = vessel['main']['rho']           # water density
+g = vessel['main']['g']               # Acceleration of gravity
 
 Xu = -2.33
 Xuu = 0
