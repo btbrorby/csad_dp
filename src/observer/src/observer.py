@@ -37,8 +37,6 @@ def observer_linear(eta_hat, nu_hat, bias_hat, eta, tau, gains):
     R_inv = np.transpose(R)
     dt = 0.01 #Should be depending on yaml file!!!
     
-    
-    
     eta_tilde = eta - eta_hat
     
     # Observer dynamics:
@@ -54,7 +52,7 @@ def observer_linear(eta_hat, nu_hat, bias_hat, eta, tau, gains):
     bias_hat = bias_hat + bias_hat_dot * dt
     
     return eta_hat, nu_hat, bias_hat
-    
+
 
 ### End of student code ###
 

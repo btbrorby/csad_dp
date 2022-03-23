@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-import wave
 from numpy import angle
 import generateModelData_CSAD as data
 from waveLoads import Wave
@@ -11,6 +10,9 @@ from ThrusterDynamics import ThrusterDynamics
 import rospy
 import numpy as np
 from matplotlib import pyplot
+from mpl_toolkits import mplot3d
+import time
+
 import math
 
 #Time step for simulation
@@ -31,7 +33,7 @@ class CSAD:
         self.nu_dot = np.zeros(6)
         self.bias_dot = np.zeros(6)
         
-        self.T_b = 0.0*np.ones(6)   # Tuning bias
+        self.T_b = 0.0*np.ones(6)   # Tuning bias 2~3 times larger than the wave period(?) Make function for this!
         self.biasMean = 0.0     # Defining white noise
         self.biasStd = 0.0      # Defining white noise
         
@@ -48,7 +50,6 @@ class CSAD:
         
         #Subscribes on the u vector from thrust allocation: 
         self.sub_u = rospy.Subscriber('/CSAD/u', Float32MultiArray, queue_size=1)
-        
         
         # For plotting:
         self.timeVec = []
@@ -95,6 +96,7 @@ class CSAD:
     def getD(self, nu):
         """
         Calculates the damping matrix as function of nu.
+        Only used in updateStates(), not in update().
 
         Args:
             nu (array): body fixed velocity
@@ -134,7 +136,7 @@ class CSAD:
         Update states for the vessel, with parameters based on different frequencies achieved from experiments (Bjornoe).
         Note that Waves.setHeading() have to be called after calling this function.
         """
-        index = np.argmin(np.abs(data.frequencies - freq))
+        index = np.argmin(np.abs(data.frequencies - freq)) #Should probably be a interpolation instead...
         A = data.A[:,:,index]   #Added mass
         B = data.B[:,:,index]   #Potential + viscous damping
         C = data.C[:,:,index]   #Restoring forces
@@ -147,7 +149,7 @@ class CSAD:
         self.eta_dot = np.matmul(J, self.nu)
         
         noise = np.random.normal(self.biasMean, self.biasStd, 6)
-        self.bias_dot = np.matmul(-self.T_b,self.bias) + noise
+        self.bias_dot = np.matmul(-self.T_b, self.bias) + noise
         
         self.nu_dot = np.matmul(Minv, (np.matmul(-B, self.nu) + np.matmul(-C, self.eta) + np.matmul(Jinv, self.bias) + tauEnv + tauThr))
         
@@ -201,18 +203,23 @@ class CSAD:
 
 
 eta0 = np.zeros(6)
-vessel = CSAD(eta0)
-seastate = Wave(0.04*2, 1, angle=np.radians(45))
+vessel = CSAD(eta0, dt=0.01)
+seastate = Wave(0.04*2, 1.0, angle=np.radians(0), dt=0.01, regular=True)
 thrLoad = np.zeros(6)
 loadx = []
 loady = []
 
-while vessel.time < 70:
+while vessel.time < 20:
+    start = time.time()
     waveLoads = seastate.getWaveLoads()
     vessel.update(waveLoads, thrLoad, seastate.frequency)
-    seastate.setHeading(vessel.eta[5])
+    seastate.updateHeading(vessel.eta[5])
+    end = time.time()
+    # print("main", end-start)
     loadx.append(waveLoads[0])
     loady.append(waveLoads[1])
+    
+    
     
 
 fig = pyplot.figure()
@@ -222,19 +229,22 @@ pyplot.plot(vessel.timeVec,loady,'--', label='loady')
 pyplot.legend()
 fig1 = pyplot.figure()
 pyplot.title('Pos function of time')
-# pyplot.plot(vessel.timeVec,vessel.xVec, label='x')
-# pyplot.plot(vessel.timeVec,vessel.yVec, label='y')
-pyplot.plot(vessel.timeVec,vessel.zVec, label='z')
-pyplot.plot(vessel.timeVec,vessel.thetaVec, label='pitch')
-pyplot.plot(vessel.timeVec,vessel.psiVec, '--', label='heading')
+pyplot.plot(vessel.timeVec,vessel.xVec, label='x')
+pyplot.plot(vessel.timeVec,vessel.yVec, label='y')
+pyplot.plot(vessel.timeVec,vessel.psiVec, label='psi')
+#pyplot.plot(vessel.timeVec,vessel.thetaVec, label='pitch')
+#pyplot.plot(vessel.timeVec,vessel.psiVec, '--', label='heading')
 pyplot.legend()
 pyplot.grid()
 
-fig2 = pyplot.figure()
-pyplot.title('XY plot')
-pyplot.plot(vessel.xVec, vessel.yVec, 'o', label='vessel1', markersize=2)
-pyplot.legend()
-pyplot.grid()
+# fig2 = pyplot.figure()
+# ax = pyplot.axes()
+
+# ax.quiver(vessel.xVec, vessel.yVec, np.cos(vessel.psiVec), np.sin(vessel.psiVec), scale=5)
+# pyplot.title('XY plot')
+# #pyplot.plot(vessel.xVec, vessel.yVec, 'o', label='vessel1', markersize=2)
+# #pyplot.legend()
+# pyplot.grid()
 pyplot.show()
 
 
@@ -246,7 +256,7 @@ Hs = 0.01
 Tp = 0.01
 waveAngle = 0
 seastate = Wave(Hs, Tp, waveAngle, regular=True)
-seastate.setHeading(vessel.eta[5]) #Set heading must be called every time updateStates() are called!
+seastate.updateHeading(vessel.eta[5]) #Set heading must be called every time updateStates() are called!
 
 
 def loop():
@@ -255,7 +265,7 @@ def loop():
     tauThrust = vessel.thrustDynamics.getThrustLoads()
     #Update vessel dynamics:
     vessel.update(tauWave, tauThrust, seastate.frequency)
-    seastate.setHeading(vessel.eta[5])  #Set heading must be called every time updateStates() are called!
+    seastate.updateHeading(vessel.eta[5])  #Set heading must be called every time updateStates() are called!
     
     
     return 0
