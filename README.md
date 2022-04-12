@@ -37,7 +37,7 @@ ALLOCATION		rosrun thrust_allocation thrust_node.py
 
 RQT GRAPH		rosrun rqt_graph rqt_graph
 	- Used for visualization of nodes and topics.
-	- For giving wsl access to display, write:
+	- If the you are executing in wsl, you have to give access to a display. For giving wsl access to display, write:
 		export DISPLAY=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}'):0
 	- Can only be run outside pi, thus only used for testing without physical setup.
 

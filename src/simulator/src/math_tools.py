@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import numpy as np
 import math
 
@@ -136,6 +137,15 @@ def transformationMatrix(eta):
         J = np.hstack((np.vstack((J1, zero)), np.vstack((zero, J2))))
         
         return J
+
+def skewSymmetricMatrix(r):
+    if np.size(r)==1:
+        r = [0, 0, r]
+    S = np.array([[0, -r[2], r[1]],
+                  [r[2], 0, -r[0]],
+                  [-r[1], r[0], 0]])
+    return S
+
 
             
 def three2sixDof(x):

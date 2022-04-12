@@ -3,7 +3,7 @@ from operator import imul
 from platform import node
 import numpy as np
 import matplotlib.pyplot as plt
-from math_tools import quat2eul
+import math_tools
 from numpy import size
 import rospy
 from sensor_msgs.msg import Imu
@@ -50,7 +50,7 @@ class GNSS():
         quat_y = self.msg_odometry.pose.pose.orientation.y
         quat_z = self.msg_odometry.pose.pose.orientation.z
         quat_w = self.msg_odometry.pose.pose.orientation.w
-        self.eta[3:6] = quat2eul(quat_w, quat_x, quat_y, quat_z)
+        self.eta[3:6] = math_tools.quat2eul(quat_w, quat_x, quat_y, quat_z)
         return self.eta, self.nu
         
         
@@ -97,6 +97,7 @@ class IMU():
         self.y = 0.0
         self.z = 0.0
         
+        self.g = [0.0, 0.0, 9.81] #expressed in body frame
         
         
         #For plotting:
@@ -131,7 +132,7 @@ class IMU():
         quat_y = self.msg_odometry.pose.pose.orientation.y
         quat_z = self.msg_odometry.pose.pose.orientation.z
         quat_w = self.msg_odometry.pose.pose.orientation.w
-        self.eta[3:6] = quat2eul(quat_w, quat_x, quat_y, quat_z)
+        self.eta[3:6] = math_tools.quat2eul(quat_w, quat_x, quat_y, quat_z)
         return self.eta, self.nu
         
     def getImuLocation(self):
@@ -163,18 +164,45 @@ class IMU():
         
         
         
-    def getBias(self, dt):
+    def getBias(self):
         """Bias term"""
         self.noiseBias = np.random.normal(self.mean, self.std, 1)
         self.bias_d = self.noiseBias
-        self.bias = self.bias + self.bias_d*dt
+        self.bias = self.bias + self.bias_d*self.dt
         return self.bias
+    
+    def getMeasurementNoise(self):
+        w = np.random.normal(self.mean, self.std, 1)
+        return w
         
         
-    def getAccMeasured(self, dt):
-        """Outputs the simulated acc measurement"""
+    def getAccMeasured(self):
+        """Outputs the simulated measurement from one imu in sensor frame"""
+        [eta, nu] =self.getOdom()
+        l = self.getImuLocation()
+        
+        g_dot = np.matmul(-nu[3:6], self.g)
+        self.g += g_dot
+        b = self.getBias()
+        w = self.getMeasurementNoise()
+        
+        # al = #unfinnished...
+        am = al + np.matmul(nu[3:6], nu[0:3]) + self.g + b + w
+        
+        
+        S = math_tools.skewSymmetricMatrix(l)
+        H = np.array([[0, -l[0], -l[0], l[1], l[2], 0],
+                      [-l[1], 0, -l[1], l[0], 0, l[2]],
+                      [-l[2], -l[2], 0, 0, l[0], l[1]]])
+        W = np.array([np.eye(3), np.linalg.inv(S), H])
+        
+        al = np.matmul(W) #unfinnished....
+        
+        
         self.noiseMeasurement = np.random.normal(self.mean, self.std, 1)
-        self.getBias(dt)
+        self.getBias()
+        
+        """Remember to turn the output measurements so that it is equvivalent to the physical setup!!!"""
         return self.nu_d + self.bias + self.noiseMeasurement
     
     
