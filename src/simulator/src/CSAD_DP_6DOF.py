@@ -12,19 +12,23 @@ import numpy as np
 from matplotlib import pyplot
 from mpl_toolkits import mplot3d
 import time
+import os
+import yaml
 
-import math
-
-#Time step for simulation
-dt = 0.01
+path = os.path.dirname(os.getcwd())
+with open(r"{0}/csad_dp_ws/src/simulator/src/params.yaml".format(path)) as file:
+    params = yaml.load(file, Loader=yaml.Loader)
+    
+global timeStep
+timeStep = 1.0/params["runfrequency"]
 
 class CSAD:
     
     
-    def __init__(self, eta0, dt=0.01):
+    def __init__(self, eta0, dt=timeStep):
         self.dt = dt
         self.time = 0
-        
+        self.RAOForce = data.RAO_FORCE
         #Initialzing states
         self.eta = eta0
         self.nu = np.zeros(6)
@@ -60,6 +64,27 @@ class CSAD:
         self.thetaVec = []
         self.psiVec = []
         self.thrustLoadVec = []
+        
+    def publish(self):
+        quaternion = math_tools.euler2quat(self.eta[3], self.eta[4], self.eta[5])
+        self.odometry_msg.pose.pose.position.x = self.eta[0]
+        self.odometry_msg.pose.pose.position.y = self.eta[1]
+        self.odometry_msg.pose.pose.position.z = self.eta[2]
+        self.odometry_msg.pose.pose.orientation.x = quaternion[0]
+        self.odometry_msg.pose.pose.orientation.y = quaternion[1]
+        self.odometry_msg.pose.pose.orientation.z = quaternion[2]
+        self.odometry_msg.pose.pose.orientation.w = quaternion[3]
+        
+        self.odometry_msg.twist.twist.linear.x = self.nu[0]
+        self.odometry_msg.twist.twist.linear.y = self.nu[1]
+        self.odometry_msg.twist.twist.linear.z = self.nu[2]
+        self.odometry_msg.twist.twist.angular.x = self.nu[3]
+        self.odometry_msg.twist.twist.angular.y = self.nu[4]
+        self.odometry_msg.twist.twist.angular.z = self.nu[5]
+        
+        self.odometry_msg.header.stamp.secs = self.time
+        
+        self.pub_odometry.publish(self.odometry_msg)
     
      
     def saveData(self):
@@ -93,50 +118,15 @@ class CSAD:
         self.odometry_msg.twist.twist.angular.y = self.nu[4]
         self.odometry_msg.twist.twist.angular.z = self.nu[5]
         
-    def getD(self, nu):
-        """
-        Calculates the damping matrix as function of nu.
-        Only used in updateStates(), not in update().
-
-        Args:
-            nu (array): body fixed velocity
-
-        Returns:
-            Array: Damping matrix (6DOF), but currrently only surge, sway and yaw directions are calculated. This is due to restricted available data.
-        """
-        u = nu[0]
-        v = nu[1]
-        w = nu[2]
-        p = nu[3]
-        q = nu[4]
-        r = nu[5]
-        
-        d11 = data.Xu + data.Xuu*np.abs(u) + data.Xuuu*(u**2)
-        d22 = data.Yv + data.Yvv*np.abs(v) + data.Yvvv*(v**2) + data.Yrv*np.abs(r)
-        d26 = data.Yr + data.Yvr*np.abs(v) + data.Yrr*np.abs(r) + data.Yrrr*(r**2)
-        d62 = data.Nv + data.Nvv*np.abs(v) + data.Nvvv*(v**2) + data.Nrv*np.abs(r)
-        d66 = data.Nr + data.Nvr*np.abs(v) + data.Nrr*np.abs(r) + data.Nrrr*(r**2)
-        
-        D = np.zeros([6, 6])
-        D[0][0] = -d11
-        D[1][1] = -d22
-        D[1][5] = -d26
-        D[5][1] = -d62
-        D[5][5] = -d66
-        
-        return D
-    
-   
-        
         
     # def getC(self):
         
-    def update(self, tauEnv, tauThr, freq):
+    def updateStates(self, tauEnv, tauThr, waveFreq):
         """
         Update states for the vessel, with parameters based on different frequencies achieved from experiments (Bjornoe).
         Note that Waves.setHeading() have to be called after calling this function.
         """
-        index = np.argmin(np.abs(data.frequencies - freq)) #Should probably be a interpolation instead...
+        index = np.argmin(np.abs(data.frequencies - waveFreq)) #Should probably be a interpolation instead...
         A = data.A[:,:,index]   #Added mass
         B = data.B[:,:,index]   #Potential + viscous damping
         C = data.C[:,:,index]   #Restoring forces
@@ -162,44 +152,6 @@ class CSAD:
         self.saveData()
         self.time += self.dt
         
-        
-        
-    def updateStates(self, tauEnv, tauThr):
-        """
-        Based on the following model:
-        eta_dot = J(eta)*nu
-        bias_dot = -T_b*bias + w_b
-        M*nu_dot = -D_lin*nu +J(eta)^T * bias + tau_thr + tau_wave2
-        
-        According to Bjoernoe's OMAE paper, the bias includes also wave2, but we want this to be reflected by incomming waves!
-
-        Returns:
-            _type_: _description_
-        """
-        J = math_tools.transformationMatrix(self.eta)
-        self.eta_dot = np.matmul(J, self.nu)
-        
-        noise = np.random.normal(self.biasMean, self.biasStd, 6)
-        self.bias_dot = np.matmul(-self.T_b,self.bias) + noise
-        
-        self.bias_dot = np.zeros(6) ########################
-        
-        M = data.MRB + data.MA
-        Minv = np.linalg.inv(M)
-        D = self.getD(self.nu)
-        
-        self.nu_dot = np.matmul(Minv, (np.matmul(-D, self.nu) + np.matmul(np.linalg.inv(J), self.bias) + tauEnv + tauThr))
-       
-        # Euler integration:
-        self.eta += self.eta_dot*self.dt
-        self.eta[5] = math_tools.ssa(self.eta[5])
-        self.nu += self.nu_dot*self.dt
-        self.bias += self.bias_dot*self.dt
-        
-        self.saveData()
-        self.time += self.dt
-        return 0
-    
 
 
 eta0 = np.zeros(6)
@@ -212,7 +164,7 @@ loady = []
 while vessel.time < 20:
     start = time.time()
     waveLoads = seastate.getWaveLoads()
-    vessel.update(waveLoads, thrLoad, seastate.frequency)
+    vessel.updateStates(waveLoads, thrLoad, seastate.frequency)
     seastate.updateHeading(vessel.eta[5])
     end = time.time()
     # print("main", end-start)
@@ -258,14 +210,13 @@ waveAngle = 0
 seastate = Wave(Hs, Tp, waveAngle, regular=True)
 seastate.updateHeading(vessel.eta[5]) #Set heading must be called every time updateStates() are called!
 
-
-def loop():
-    # Update loads:
-    tauWave = seastate.getWaveLoads() #!
-    tauThrust = vessel.thrustDynamics.getThrustLoads()
-    #Update vessel dynamics:
-    vessel.update(tauWave, tauThrust, seastate.frequency)
-    seastate.updateHeading(vessel.eta[5])  #Set heading must be called every time updateStates() are called!
+# def loop():
+#     # Update loads:
+#     tauWave = seastate.getWaveLoads() #!
+#     tauThrust = vessel.thrustDynamics.getThrustLoads()
+#     #Update vessel dynamics:
+#     vessel.updateStates(tauWave, tauThrust, seastate.frequency)
+#     seastate.updateHeading(vessel.eta[5])  #Set heading must be called every time updateStates() are called!
     
     
-    return 0
+    # return 0

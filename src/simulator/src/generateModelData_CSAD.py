@@ -1,17 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
-# ----------------------------------------------------------------------------
-# This code is part of the MCSim_python toolbox and repository.
-# Created By: B. T. Brørby
-# Created Date: 2022-02-18
-# Revised: <date>	<developer> <description>
-#          <date>	<developer> <description>
-# Tested:  <date> <developer>
-# 
-# Copyright (C) 202x: <organization>, <place>
-# Licensed under GPL-3.0-or-later
-# ---------------------------------------------------------------------------
-
 from fileConfig import loadmat
 import numpy as np
 import os
@@ -94,8 +81,3 @@ propellerDiameter = 0.03    #[m]
 n_dot_max = 5               #[1/s^2]
 alpha_dot_max = 2           #[1/s]
 thrust_max = 1.5            #[N]
-
-
-# if __name__ == '__main__':
-#     # print(out['vessel']['main']['g'])
-#     print('hei')

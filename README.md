@@ -24,6 +24,8 @@ have to modify the file or source a the environment each time a new terminal is 
 NOTE: Alsways source dev/setup.bash in a new terminal and after editing code in order to have access to the
 newest version of the code.
 
+Also NOTE that for running the launch files, you have to be inside the 'csad_dp_ws' workspace.
+
 ____________________________________________________________________________________________________________
 
 FOR SETTING UP THE CONTROL SYSTEM'S MODULES:

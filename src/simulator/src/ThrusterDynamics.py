@@ -4,12 +4,21 @@ import math_tools
 import generateModelData_CSAD as data
 import math
 
+from std_msgs.msg import Float64MultiArray
 
-       
+import yaml
+import os
+
+path = os.path.dirname(os.getcwd())
+with open(r"{0}/csad_dp_ws/src/simulator/src/params.yaml".format(path)) as file:
+    params = yaml.load(file, Loader=yaml.Loader)
+    
+global timeStep
+timeStep = 1.0/params["runfrequency"]
       
 #This class should maybe be in separate python file?
 class ThrusterDynamics:
-    def __init__(self, u, dt=0.01):
+    def __init__(self, u, dt=timeStep):
         #Initialize thruster dynamics
         self.loads = np.zeros(6)
         self.u = u[0:6]
@@ -28,6 +37,8 @@ class ThrusterDynamics:
         #Limitations and saturations
         self.alpha_dot_max = data.alpha_dot_max
         self.n_dot_max = data.n_dot_max
+        
+        self.msg_u = Float64MultiArray()
         
         
     def actualThrustLoads(self, u, alpha):
@@ -98,5 +109,8 @@ class ThrusterDynamics:
         
     def getThrustLoads(self):
         return self.loads
+    
+    def updateU(self, u):
+        self.msg_u = u
 
     

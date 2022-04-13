@@ -11,10 +11,24 @@ from scipy import optimize as opt, size
 import generateModelData_CSAD as data
 import matplotlib.pyplot as plt
 
+from std_msgs.msg import Float64MultiArray
+
+import rospy
+
+import yaml
+import os
+
+path = os.path.dirname(os.getcwd())
+with open(r"{0}/csad_dp_ws/src/simulator/src/params.yaml".format(path)) as file:
+    params = yaml.load(file, Loader=yaml.Loader)
+    
+global timeStep
+timeStep = 1.0/params["runfrequency"]
+
 
 
 class Wave():
-    def __init__(self, Hs, Tp, waterDepth=np.infty, angle=0, deltaFrequency=0.1, regular=True, dt=0.01):
+    def __init__(self, Hs, Tp, waterDepth=np.infty, angle=0, deltaFrequency=0.1, regular=True, dt=timeStep):
         
         self.dt = dt
         
@@ -49,6 +63,15 @@ class Wave():
         self.time = 0
         
         [self.elementAmplitude, self.elementFrequencies, self.elementPhase] = self.generateIrregular()
+        
+        self.msg_waveMeasurement = Float64MultiArray()
+        self.pub_waveMeasurement = rospy.Publisher('/waveElevation', Float64MultiArray, queue_size=1)
+        
+    def publish(self):
+        self.msg_waveMeasurement[0] = self.getWaveElevation()
+        self.msg_waveMeasurement[1] = self.frequency
+        
+        self.pub_waveMeasurement.publish(self.msg_waveMeasurement)
         
     def updateHeading(self, heading):
         """
@@ -302,7 +325,7 @@ class Wave():
         return elementAmplitude, elementFrequencies, elementPhase
         
         
-    def getWaveElevation(self, stopTime):
+    def getWaveElevation(self, stopTime=30):
         """Returns time array and a wave elevation array. Pr 14.04.2022, not made for useage in control system."""
         time = np.arange(0.0, stopTime, self.dt)
         elevation = []
