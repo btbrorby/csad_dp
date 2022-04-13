@@ -167,7 +167,7 @@ while vessel.time < 20:
     vessel.updateStates(waveLoads, thrLoad, seastate.frequency)
     seastate.updateHeading(vessel.eta[5])
     end = time.time()
-    # print("main", end-start)
+
     loadx.append(waveLoads[0])
     loady.append(waveLoads[1])
     

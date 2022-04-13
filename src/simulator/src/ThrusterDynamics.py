@@ -56,7 +56,6 @@ class ThrusterDynamics:
         #Limits the signal rates based on specified limitations:
         alpha_actual = self.rateLimiter(alpha, self.alpha_previous, self.alpha_dot_max)
         n_actual = self.rateLimiter(n, self.n_previous, self.n_dot_max)
-        
         #Calculates the actual actuator loads for each actuator:
         actuatorLoads = data.rho*(data.propellerDiameter**4)*(data.K * np.abs(n) * n)
         
@@ -66,25 +65,30 @@ class ThrusterDynamics:
         #Summerize contributions from each eactuator and converts them to specific loads in body frame:
         loads = np.zeros(6)
         for i in range(np.size(actuatorLoads)):
-            loads[0] = loads[0] + actuatorLoads[i]*math.cos(alpha[i])
-            loads[1] = loads[1] + actuatorLoads[i]*math.sin(alpha[i])
-            loads[5] = loads[5] + data.Lx[i]*actuatorLoads[i]*math.sin(alpha[i]) - data.Ly*actuatorLoads[i]*math.cos(alpha[i])
-        
+            loads[0] += actuatorLoads[i]*math.cos(alpha[i])
+            loads[1] += actuatorLoads[i]*math.sin(alpha[i])
+            loads[5] += data.Lx[i]*actuatorLoads[i]*math.sin(alpha[i]) - data.Ly[i]*actuatorLoads[i]*math.cos(alpha[i])
+            
         #Stores previous signals. Used for limit the signal rates:
-        self.alpha_previous = alpha_actual #Sould this be called where the function is called?
-        self.n_previous = n #Sould this be called where the function is called?
+        self.alpha_previous = alpha_actual 
+        self.n_previous = n 
         
         return loads, n_actual, alpha_actual
     
+    
     def propellerRevolution(self, u):
-        n = math_tools.sign(u)*math.sqrt(np.abs(u))
+        """Calculates the propeller revolution, depending on the control input u."""
+        n = math_tools.sign(u)*math_tools.sqrt(np.abs(u))
         return n
         
     def saturate(self, signal, min, max):
-        if signal < min:
-            signal = min
-        elif signal > max:
-            signal = max
+        count = 0
+        for s in signal:
+            if signal[count] < min:
+                signal[count] = min
+            elif signal[count] > max:
+                signal[count] = max
+        
         return signal
     
     def rateLimiter(self, signal, signalPrevious, limit):
@@ -96,11 +100,14 @@ class ThrusterDynamics:
             signalPrevious (_type_): A copy of the previous signal
             limit (_type_): The specified rate limit
         """
-        plussMinus = math_tools.sign(signal-signalPrevious) #negative if signal is decreasing, positiv if increasing
-        if np.abs((signal - signalPrevious)/self.dt) > limit:
-            signal = signalPrevious + plussMinus*limit*self.dt
-        
-        return signal    
+        self.dt = 1.0
+        count = 0
+        for s in signal:
+            plussMinus = math_tools.sign(signal[count]-signalPrevious[count]) #negative if signal is decreasing, positiv if increasing
+            if (plussMinus*(signal[count]-signalPrevious[count])/self.dt > limit):
+                signal[count] = signalPrevious[count] + plussMinus*limit*self.dt
+            count += 1
+        return signal
     
     # Implement a low pass filter for smoothing thrust dynamics (angle shift and setpoint shift).
     # n_dot <= 5 [1/s^2] propeller acceleration 5 revolutions pr s^2
@@ -108,9 +115,11 @@ class ThrusterDynamics:
     # Saturate min and max values of thrust (max thrust is 1.5[N])
         
     def getThrustLoads(self):
+        [self.loads, n_actual, alpha_actual] = thruster.actualThrustLoads(self.u, self.alpha)
         return self.loads
     
-    def updateU(self, u):
-        self.msg_u = u
+    def updateU(self, controlInput):
+        self.u = controlInput[0:6]
+        self.alpha = controlInput[5:12]
 
     

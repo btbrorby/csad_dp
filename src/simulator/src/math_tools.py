@@ -95,7 +95,7 @@ def sign(x):
             y = 1
     else:
         count = 0
-        for i in range(np.size(x)):
+        for i in x:
             if i < 0:
                 y[count] = -1
             elif i > 0:

@@ -349,7 +349,7 @@ seastate = Wave(3.1, 5.4, regular=False, dt=0.001)
 [time, elev] = seastate.getWaveElevation(20)
 f = np.fft.fft(elev, len(elev))
 freq = np.fft.fftfreq(len(elev), seastate.dt)
-print(freq)
+# print(freq)
 # inx = fhat > 40
 # fhat *= inx
 # restore = np.fft.ifft(fhat)

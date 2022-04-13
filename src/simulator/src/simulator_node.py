@@ -29,7 +29,6 @@ vessel = CSAD(eta0)
 u0 = np.zeros(12)
 thrusters = ThrusterDynamics(u0)
 
-print(vessel.RAOForce)
 
 #Seastate:
 Hs = 0.4
@@ -51,8 +50,8 @@ if __name__ == '__main__':
     r = rospy.Rate(params["runfrequency"]) # Usually set to 100 Hz
     
     while not rospy.is_shutdown():
+        
         tau_wave = seastate.getWaveLoads()
-        # thrusters.updateU(u) #is called in initSimulatorNode()
         tau_thr = thrusters.getThrustLoads() #needs to be finnished
         waveFrequency = seastate.frequency
         
@@ -63,12 +62,7 @@ if __name__ == '__main__':
         imu2.setOdometry(vessel.eta, vessel.nu, vessel.eta_dot, vessel.nu_dot)
         imu3.setOdometry(vessel.eta, vessel.nu, vessel.eta_dot, vessel.nu_dot)
         imu4.setOdometry(vessel.eta, vessel.nu, vessel.eta_dot, vessel.nu_dot)
-        
-        measurement_imu1 = imu1.getAccMeasured()
-        measurement_imu2 = imu2.getAccMeasured()
-        measurement_imu3 = imu3.getAccMeasured()
-        measurement_imu4 = imu4.getAccMeasured()
-        # measurement_gnss = gnss.getGnssMeasured() #uses raw simulator measurements instead
+        gnss.setOdometry(vessel.eta, vessel.nu, vessel.eta_dot, vessel.nu_dot)
         
         measurement_wave = seastate.getWaveElevation(30) #needs to be made for use in control system
         
@@ -79,6 +73,7 @@ if __name__ == '__main__':
         imu2.publish()
         imu3.publish()
         imu4.publish()
+        gnss.publish()
         # seastate.publish()
         
         r.sleep()
