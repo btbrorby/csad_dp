@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+from cmath import pi
+from turtle import width
 import numpy as np
 import matplotlib.pyplot as plt
 import math_tools
@@ -214,11 +216,6 @@ class IMU():
         
         a_l = self.nu_dot[0:3] + np.cross(self.nu_dot[3:6], l) + np.cross(self.nu[3:6], np.cross(self.nu[3:6], l))
         a_m = a_l + np.cross(self.nu[3:6], self.nu[0:3]) + self.g + b[0:3] + w[0:3]
-        
-        #turning the axes since the real imu is defined this way in the physical setup:
-        a_m[0] *= 1.0
-        a_m[1] *= -1.0
-        a_m[2] *= -1.0
                 
         self.time += self.dt
         """Remember to turn the output measurements so that it is equvivalent to the physical setup!!!"""
@@ -227,8 +224,6 @@ class IMU():
     def getGyroMeasured(self):
         
         return [0.0, 0.0, 0.0]
-
-        
 
 
 """For testing"""
