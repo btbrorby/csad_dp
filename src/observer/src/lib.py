@@ -46,7 +46,7 @@ class Qualisys():
 
 class Tau():
     def __init__(self):
-        self.tau = np.array([0, 0, 0])
+        self.tau = np.array([0.0, 0.0, 0.0])
 
     def updateTau(self, msg):
         self.tau = msg.data
