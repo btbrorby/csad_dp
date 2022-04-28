@@ -60,7 +60,7 @@ class Wave():
     
         self.regular = regular #True = regular, False = irregular
         
-        self.time = 0
+        self.time = 0.0
         
         [self.elementAmplitude, self.elementFrequencies, self.elementPhase] = self.generateIrregular()
         
@@ -126,7 +126,7 @@ class Wave():
                                 data.RAO_FORCE['phase'][4][frequencyIndex, headingIndex,0],
                                 data.RAO_FORCE['phase'][5][frequencyIndex, headingIndex,0]])
             
-            firstOrderLoad = np.abs(forceAmp)*waveAmplitude*np.cos(waveFreq*self.time + forcePhase + wavePhase)
+            firstOrderLoad = np.abs(forceAmp)*waveAmplitude*np.cos(waveFreq*self.time + forcePhase + wavePhase)      
         return firstOrderLoad
     
     def getDriftLoads(self, waveFreq, angleWaveBody, waveAmplitude):
@@ -196,12 +196,11 @@ class Wave():
             driftCoefficient = np.array([data.driftForceAmpX[frequencyIndex, headingIndex],
                                 data.driftForceAmpY[frequencyIndex, headingIndex],
                                 data.driftForceAmpPsi[frequencyIndex, headingIndex]])
-            xElement = np.sum(waveAmplitude*np.power(np.abs(driftCoefficient[0]), 0.5)*np.cos(waveFreq*self.time + phaseLag))
-            yElement = np.sum(waveAmplitude*np.power(np.abs(driftCoefficient[1]), 0.5)*np.cos(waveFreq*self.time + phaseLag)) #What happens when driftCoefficients are less than zero?????
-            psiElement = np.sum(waveAmplitude*np.power(np.abs(driftCoefficient[2]), 0.5)*np.cos(waveFreq*self.time + phaseLag))
+            xElement = np.sum(waveAmplitude*(np.power(np.abs(driftCoefficient[0]), 0.5))*np.cos(waveFreq*self.time + phaseLag))
+            yElement = np.sum(waveAmplitude*(np.power(np.abs(driftCoefficient[1]), 0.5))*np.cos(waveFreq*self.time + phaseLag))
+            psiElement = np.sum(waveAmplitude*(np.power(np.abs(driftCoefficient[2]), 0.5))*np.cos(waveFreq*self.time + phaseLag))
+            slowlyVaryingLoads = np.array([2.0*np.power(xElement, 2.0), 2*np.power(yElement, 2), 2*np.power(psiElement, 2)])
             
-            slowlyVaryingLoads = np.array([2*np.power(xElement, 2), 2*np.power(yElement, 2), 2*np.power(psiElement, 2)])
-        
         slowlyVaryingLoads = math_tools.three2sixDof(slowlyVaryingLoads)
         return slowlyVaryingLoads
         
@@ -231,7 +230,7 @@ class Wave():
         sumLoads = np.add(driftLoads, slowlyVaryingLoads) 
         sumLoads = np.add(sumLoads, firstOrderLoads)
         
-        return sumLoads
+        return driftLoads #firstOrderLoads #slowlyVaryingLoads #sumLoads
     
     
         
@@ -345,59 +344,52 @@ class Wave():
         return time, elevation
         
 
-seastate = Wave(3.1, 5.4, regular=False, dt=0.001)
-[time, elev] = seastate.getWaveElevation(20)
-f = np.fft.fft(elev, len(elev))
-freq = np.fft.fftfreq(len(elev), seastate.dt)
-# print(freq)
-# inx = fhat > 40
-# fhat *= inx
-# restore = np.fft.ifft(fhat)
-# fhat = np.fft.fft(restore)
-# print(seastate.elementFrequencies)
 
-fig,axs = plt.subplots(2,1)
-plt.sca(axs[0])
-plt.plot(time, elev)
 
-plt.sca(axs[1])
-plt.plot(2*pi/time, f)
-
-plt.show()
-# t = 0
+# seastate = Wave(2.0*1.0, 1.0, regular=True)
+# seastate.updateHeading(0.0)
+# t = 0.0
 # time = []
-# a = []
-# fig = plt.figure()
-# while(t < 20):
-    
-#     [amp, freq, phases] = seastate.generateIrregular()
-#     print(amp)
-#     a.append(amp)
-#     time.append(t)
-#     # plt.scatter(t, a)
-    
-    
-#     t += 1
-# print(shape(time), shape(a))
-# plt.show()
-# teststate = Wave(0.1, 2.4, regular=False)
-# freq = teststate.spectrumFrequencies
-# spec = teststate.defineSpectrum(freq)
-# # fig = plt.figure()
-# # plt.plot(freq, spec)
-# t = 0
-# load = []
-# time = []
+# tauX = []
+# tauY = []
+# tauZ = []
 # while t < 10:
-#     # print(seastate.getWaveLoads())
-#     # seastate.getWaveLoads()
-#     seastate.getWaveLoads()
+#     [loadX, loadY, loadZ] = seastate.getWaveLoads()[0:3]
 #     time.append(t)
-#     t+=0.01
+#     tauX.append(loadX)
+#     tauY.append(loadY)
+#     tauZ.append(loadZ)
+#     t += seastate.dt
     
-# # fig = plt.figure()
-# # plt.plot(time, load)
-# # plt.show()
+# [tE, elev] = seastate.getWaveElevation(10.0)
+# Tstr = 'Mean drift: Tp = ' + str(2*pi/seastate.frequency) + ', Hs = ' + str(seastate.Hs)
+
+# fig,axs = plt.subplots(4,1)
+# plt.sca(axs[0])
+# plt.title(Tstr)
+# plt.plot(time, tauX)
+# plt.grid()
+# plt.legend(['force x'])
+# plt.sca(axs[1])
+# plt.plot(time, tauY)
+# plt.grid()
+# plt.legend(['force y'])
+# plt.sca(axs[2])
+# plt.plot(time, tauZ)
+# plt.grid()
+# plt.legend(['force z'])
+# # plt.sca(axs[1])
+# # plt.plot(2*pi/time, f)
+
+# plt.sca(axs[3])
+# plt.plot(tE, elev)
+# plt.grid()
+# plt.legend(['wave elevation'])
+
+
+# plt.show()
+
+
 
     
     

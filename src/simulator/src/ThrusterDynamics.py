@@ -22,7 +22,7 @@ class ThrusterDynamics:
         #Initialize thruster dynamics
         self.loads = np.zeros(6)
         self.u = u[0:6]
-        self.alpha = u[5:12]
+        self.alpha = u[6:12]
         self.n = np.zeros(6)
         self.dt = dt
         
@@ -100,10 +100,9 @@ class ThrusterDynamics:
             signalPrevious (_type_): A copy of the previous signal
             limit (_type_): The specified rate limit
         """
-        self.dt = 1.0
         count = 0
         for s in signal:
-            plussMinus = math_tools.sign(signal[count]-signalPrevious[count]) #negative if signal is decreasing, positiv if increasing
+            plussMinus = math_tools.sign(signal[count]-signalPrevious[count]) #negative if signal is decreasing, positive if increasing
             if (plussMinus*(signal[count]-signalPrevious[count])/self.dt > limit):
                 signal[count] = signalPrevious[count] + plussMinus*limit*self.dt
             count += 1
@@ -115,11 +114,11 @@ class ThrusterDynamics:
     # Saturate min and max values of thrust (max thrust is 1.5[N])
         
     def getThrustLoads(self):
-        [self.loads, n_actual, alpha_actual] = thruster.actualThrustLoads(self.u, self.alpha)
+        [self.loads, n_actual, alpha_actual] = self.actualThrustLoads(self.u, self.alpha)
         return self.loads
     
     def updateU(self, controlInput):
         self.u = controlInput[0:6]
-        self.alpha = controlInput[5:12]
+        self.alpha = controlInput[6:12]
 
     
