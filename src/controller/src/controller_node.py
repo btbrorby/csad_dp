@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 import rospy
 from controller import loop
 from lib import controllNodeInit, nodeEnd

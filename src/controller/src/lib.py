@@ -47,7 +47,7 @@ class UVector():
     Only used for manual controller
     """
     def __init__(self):
-        self.Udata = np.zeros([12, 1])
+        self.Udata = np.zeros([12,1])
         # self.pub = rospy.Publisher('/CSAD/u', Float64MultiArray, queue_size = 1)
         self.message = Float64MultiArray()
 
@@ -63,9 +63,9 @@ class Observer_Converser():
     def __init__(self):
         self.observer_msg = observer_message()
         self.sub = rospy.Subscriber('/CSAD/state_estimate', observer_message, queue_size=1)
-        self.eta_hat = np.zeros([3, 1])
-        self.nu_hat = np.zeros([3, 1])
-        self.bias_hat = np.zeros([3, 1])
+        self.eta_hat = np.zeros([3,1])
+        self.nu_hat = np.zeros([3,1])
+        self.bias_hat = np.zeros([3,1])
 
     def callback(self, msg):
         self.eta_hat = msg.eta
@@ -83,9 +83,9 @@ class Reference_Converser():
     def __init__(self):
         self.ref_msg = reference_message()
         self.sub = rospy.Subscriber('/CSAD/reference', reference_message, queue_size=1)
-        self.eta_d = np.zeros([3, 1])
-        self.eta_ds = np.zeros([3, 1])
-        self.eta_ds2 = np.zeros([3, 1])
+        self.eta_d = np.zeros([3,1])
+        self.eta_ds = np.zeros([3,1])
+        self.eta_ds2 = np.zeros([3,1])
 
     # Callback function is called when the topic is updated
     def callback(self, msg):
@@ -142,13 +142,14 @@ class Tau():
     def __init__(self):
         self.tau_msg = Float64MultiArray()
         self.pub = rospy.Publisher("/CSAD/tau", Float64MultiArray, queue_size=1)
-        self.tau = np.zeros([3, 1])
-        self.z = np.zeros([3, 1])
+        self.tau = np.zeros([3,1])
+        self.z = np.zeros([3,1])
         self.mode = False
         self.time = 0.0
 
     def updateTau(self, msg):
         self.tau = msg.data
+        # self.tau_msg.data.index()
         
     def updateIntegralAction(self, z):
         self.z = z
@@ -159,6 +160,7 @@ class Tau():
     def publish(self, tau):
         self.tau = tau
         self.tau_msg.data = tau
+        print(tau)
         # self.tau_msg.data[0] = tau[0]
         # self.tau_msg.data[1] = tau[1]
         # self.tau_msg.data[2] = tau[2]

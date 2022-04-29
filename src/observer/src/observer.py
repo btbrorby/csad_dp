@@ -12,13 +12,13 @@ class Observer:
         self.xsi_hat = self.eta_hat = self.nu_hat = self.bias_hat = np.zeros([3,1])
         self.eta = self.tau = np.zeros([3,1])
         
-        self.L_1 = np.zeros([3,3])
-        self.L_2 = np.zeros([3,3])
-        self.L_3 = np.zeros([3,3])
-        self.L_4 = np.zeros([3,3])
+        self.L_1 = np.ones([3,3])
+        self.L_2 = np.ones([3,3])
+        self.L_3 = np.ones([3,3])
+        self.L_4 = np.ones([3,3])
         
-        self.A_w = np.zeros([3,3])
-        self.C_w = np.zeros([3,3])
+        self.A_w = np.ones([3,3])
+        self.C_w = np.ones([3,3])
         
     def updateStates(self, eta, tau):
         self.eta = eta
@@ -41,10 +41,12 @@ class Observer:
         # L_2 = np.diag([50.0, 50.0, 50.0])
         # L_3 = np.diag([1.0, 1.0, 1.0])
         
-        MRB = np.array([127.92, 127.92, 61.967])
+        MRB = np.array([[127.92, 0.0, 0.0],
+                        [0.0, 127.92, 0.0],
+                        [0.0, 0.0, 61.967]])
         MA = np.array([[3.262, 0.0, 0.0],
-                    [0.0, 28.89, 0.525],
-                    [0.0, 0.525, 13.98]])
+                       [0.0, 28.89, 0.525],
+                       [0.0, 0.525, 13.98]])
         M = MRB + MA
         M_inv = np.linalg.inv(M)
         
@@ -57,13 +59,12 @@ class Observer:
         R_inv = np.transpose(R)
         
         y_tilde = self.eta_hat + np.matmul(self.C_w, self.xsi_hat)
-        eta_tilde = self.eta - self.eta_hat
         
         # Observer dynamics:
         xsi_hat_dot = np.matmul(self.A_w, self.xsi_hat) + np.matmul(self.L_1, y_tilde)
-        eta_hat_dot = np.matmul(R, self.nu_hat) + np.matmul(self.L_2, eta_tilde)
-        nu_hat_dot = np.matmul(M_inv, (-np.matmul(D, self.nu_hat) + np.matmul(R_inv, self.bias_hat) + np.matmul(R_inv, np.matmul(self.L_3, eta_tilde)) + self.tau))
-        bias_hat_dot = np.matmul(self.L_4, eta_tilde)
+        eta_hat_dot = np.matmul(R, self.nu_hat) + np.matmul(self.L_2, y_tilde)
+        nu_hat_dot = np.matmul(M_inv, (-np.matmul(D, self.nu_hat) + np.matmul(R_inv, self.bias_hat) + np.matmul(self.L_3, np.matmul(R_inv, y_tilde)) + self.tau))
+        bias_hat_dot = np.matmul(self.L_4, y_tilde)
 
         # Euler integration:
         self.xsi_hat += xsi_hat_dot*dt
@@ -77,7 +78,7 @@ class Observer:
 path = os.path.dirname(os.getcwd())
 with open(r"{0}/csad_dp_ws/src/controller/src/params.yaml".format(path)) as file:
     params = yaml.load(file, Loader=yaml.Loader)
-dt = 1/params["runfrequency"]
+dt = 1.0/params["runfrequency"]
 
 linearObserver = Observer(dt)
 def loop():
@@ -86,20 +87,24 @@ def loop():
     """
     eta = qualisys.getQualisysOdometry()
     
-    L1 = gains.L1
-    L2 = gains.L2
-    L3 = gains.L3
-    L4 = gains.L4
-    if ((not np.array_equal(L1, linearObserver.L_1)) or (not np.array_equal(L2, linearObserver.L_2)) or (not np.array_equal(L3, linearObserver.L_3)) or (not np.array_equal(L4, linearObserver.L_4))):
-        linearObserver.updateGains(L1, L2, L3, L4)
+    # L1 = gains.L1
+    # L2 = gains.L2
+    # L3 = gains.L3
+    # L4 = gains.L4
+    # if ((not np.array_equal(L1, linearObserver.L_1)) or (not np.array_equal(L2, linearObserver.L_2)) or (not np.array_equal(L3, linearObserver.L_3)) or (not np.array_equal(L4, linearObserver.L_4))):
+    #     linearObserver.updateGains(L1, L2, L3, L4)
     
     controlOutput = tau.getTau()
     linearObserver.updateStates(eta, controlOutput)
-    eta_hat, nu_hat, bias_hat = linearObserver.observer_linear()
+    [eta_hat, nu_hat, bias_hat] = linearObserver.observer_linear()
     
     observer.publish(eta_hat, nu_hat, bias_hat)
     # qualisys.publish()
     
-    return 0
 
-loop()
+# o = Observer(0.01)
+# eta = np.array([1.0, 2.0, 3.0])
+# tau = np.array([4.0, 5.0, 6.0])
+# o.updateStates(eta, tau)
+# [a, b, c] = o.observer_linear()
+# print(a, b, c)

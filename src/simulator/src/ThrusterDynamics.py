@@ -20,14 +20,14 @@ timeStep = 1.0/params["runfrequency"]
 class ThrusterDynamics:
     def __init__(self, u=np.zeros([12,1]), dt=timeStep):
         #Initialize thruster dynamics
-        self.loads = np.zeros(6)
+        self.loads = np.zeros([6,1])
         self.u = u[0:6]
         self.alpha = u[6:12]
-        self.n = np.zeros(6)
+        self.n = np.zeros([6,1])
         self.dt = dt
         
-        self.alpha_previous = np.zeros(6)
-        self.n_previous = np.zeros(6)
+        self.alpha_previous = np.zeros([6,1])
+        self.n_previous = np.zeros([6,1])
         
         #Thruster konfiguration
         self.Lx = data.Lx

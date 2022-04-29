@@ -11,9 +11,9 @@ class BiasController:
         self.eta_bias = self.eta_hat = self.nu_hat = np.zeros([3,1])
         self.eta_ref = self.nu_ref = np.zeros([3,1])
         self.dt = dt
-        self.Kp = np.zeros([3,3])
-        self.Kd = np.zeros([3,3])
-        self.Kb = np.zeros([3,3])
+        self.Kp = np.ones([3,3])
+        self.Kd = 0.0*np.ones([3,3])
+        self.Kb = 0.0*np.ones([3,3])
         
     def updateStates(self, eta_hat, nu_hat, bias_hat, eta_ref, nu_ref):
         self.eta_hat = eta_hat
@@ -31,7 +31,7 @@ class BiasController:
         """
         Bias estimate controller, uses the bias estimate provided from the observer directly
         """
-        self.eta_hat[2] = rad2pipi(self.eta_hat[2]) #Is this right?
+        # self.eta_hat[2] = rad2pipi(self.eta_hat[2]) #Is this right?
         R = Rzyx(self.eta_hat[2])
         R_transpose = np.transpose(R)
         
@@ -39,13 +39,14 @@ class BiasController:
         nu_tilde = self.nu_hat - self.nu_ref
         
         controlOutput = -np.matmul(self.Kp, np.matmul(R_transpose, eta_tilde)) - np.matmul(self.Kd, nu_tilde) - np.matmul(self.Kb, self.bias_hat)
+        return controlOutput
         
         
         
 path = os.path.dirname(os.getcwd())
 with open(r"{0}/csad_dp_ws/src/controller/src/params.yaml".format(path)) as file:
     params = yaml.load(file, Loader=yaml.Loader)
-dt = 1/params["runfrequency"]
+dt = 1.0/params["runfrequency"]
 
 controller = BiasController(dt)
 
@@ -56,18 +57,18 @@ def loop():
     
     # eta_ref = reference.eta_d
     # nu_ref = reference.eta_ds #Is this right?
-    eta_ref = np.array([0.0, 0.0, 0.0])
-    nu_ref = np.array([0.0, 0.0, 0.0])
+    eta_ref = 10.0*np.ones([3,1])
+    nu_ref = np.zeros([3,1])
     
-    Kp = gains.Kp
-    Kd = gains.Kd
-    Kb = gains.Kb
-    if ((not np.array_equal(Kp, controller.Kp)) or (not np.array_equal(Kd, controller.Kd)) or (not np.array_equal(Kb, controller.Kb))):
-        controller.updateStates(Kp, Kb, Kd)
+    # Kp = gains.Kp
+    # Kd = gains.Kd
+    # Kb = gains.Kb
+    # if ((not np.array_equal(Kp, controller.Kp)) or (not np.array_equal(Kd, controller.Kd)) or (not np.array_equal(Kb, controller.Kb))):
+    #     controller.updateGains(Kp, Kb, Kd)
         
     controller.updateStates(eta_hat, nu_hat, bias_hat, eta_ref, nu_ref)
     controlOutput = controller.getControlOutput()
     tau.publish(controlOutput)
     
     tau.time += dt
-    
+   

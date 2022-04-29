@@ -1,11 +1,11 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 from pydoc import importfile
 from math_tools import quat2eul, Rzyx
 import rospy
 from std_msgs.msg import Float64MultiArray
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Vector3
-from messages.msg import observer_message
+from messages.msg import observer_message, regulator_message
 import numpy as np
 import dynamic_reconfigure.client
 
@@ -15,7 +15,7 @@ class Qualisys():
     """
     def __init__(self):
         self.odom = Odometry()
-        self.eta = np.zeros([3, 1])
+        self.eta = np.zeros([3,1])
         
         #For visualization
         self.true_pos_msg = Vector3()
@@ -46,7 +46,7 @@ class Qualisys():
 
 class Tau():
     def __init__(self):
-        self.tau = np.zeros([3, 1])
+        self.tau = np.zeros([3,1])
 
     def updateTau(self, msg):
         self.tau = msg.data
@@ -58,9 +58,9 @@ class Observer_Converser():
     def __init__(self):
         self.observer_msg = observer_message()
         self.pub = rospy.Publisher('/CSAD/state_estimate', observer_message, queue_size=1)
-        self.eta_hat = np.zeros([3, 1])
-        self.nu_hat = np.zeros([3, 1])
-        self.bias_hat = np.zeros([3, 1])
+        self.eta_hat = np.zeros([3,1])
+        self.nu_hat = np.zeros([3,1])
+        self.bias_hat = np.zeros([3,1])
         
         #For visualization
         self.xyz_msg = Vector3()
@@ -78,6 +78,7 @@ class Observer_Converser():
         self.observer_msg.nu = nu_hat
         self.observer_msg.bias = bias_hat
         self.pub.publish(self.observer_msg)
+        print(eta_hat)
         
         self.xyz_msg.x = eta_hat[0]
         self.xyz_msg.y = eta_hat[1]
@@ -119,7 +120,7 @@ def observerNodeInit():
     global node
     node = rospy.init_node('Observer_node')
     rospy.Subscriber("/qualisys/Body_1/odom", Odometry, qualisys.updateQualisysOdometry) #check rostopic list for actual name on odom message!
-    rospy.Subscriber("/CSAD/tau", Float64MultiArray, Tau.updateTau)
+    rospy.Subscriber("/CSAD/tau", Float64MultiArray, tau.updateTau)
     gain_client = dynamic_reconfigure.client.Client('gain_server', timeout=30, config_callback = gains.callback)
     
     

@@ -8,7 +8,7 @@ import numpy as np
 
 class UVector():
     def __init__(self):
-        self.Udata = np.zeros([12, 1])
+        self.Udata = np.zeros(12)
         self.pub = rospy.Publisher('/CSAD/u', Float64MultiArray, queue_size=1)
         self.u_message = Float64MultiArray()
 
@@ -23,7 +23,7 @@ class UVector():
 
 class Tau():
     def __init__(self):
-        self.tau = np.array([0, 0, 0])
+        self.tau = np.zeros(3)
 
     def updateTau(self, msg):
         self.tau = msg.data

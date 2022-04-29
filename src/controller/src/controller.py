@@ -105,8 +105,8 @@ def loop():
     
     eta_ref = reference.eta_d
     nu_ref = reference.eta_ds #Is this right?
-    eta_ref = np.array([0.0, 0.0, 0.0])
-    nu_ref = np.array([0.0, 0.0, 0.0])
+    eta_ref = np.zeros(3)
+    nu_ref = np.zeros(3)
     
     Kp = gains.Kp
     Ki = gains.Ki
