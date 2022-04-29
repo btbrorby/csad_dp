@@ -5,7 +5,7 @@ from waveLoads import Wave
 import math_tools
 
 from nav_msgs.msg import Odometry
-from std_msgs.msg import Float32MultiArray
+from std_msgs.msg import Float64MultiArray
 from ThrusterDynamics import ThrusterDynamics
 import rospy
 import numpy as np
@@ -42,7 +42,7 @@ class CSAD:
         self.biasStd = 0.0      # Defining white noise
         
         #Initionalize thrust dynamics
-        self.u = np.zeros(12)
+        self.u = np.zeros([12,1])
         self.thrustDynamics = ThrusterDynamics(self.u)
         
         #ROS communication related:
@@ -54,7 +54,7 @@ class CSAD:
         self.pub_odometry2 = rospy.Publisher('/qualisys/Body_1/odom', Odometry, queue_size=1)
         
         #Subscribes on the u vector from thrust allocation: 
-        self.sub_u = rospy.Subscriber('/CSAD/u', Float32MultiArray, queue_size=1)
+        self.sub_u = rospy.Subscriber('/CSAD/u', Float64MultiArray, queue_size=1)
         
         # For plotting:
         self.timeVec = []
@@ -212,13 +212,13 @@ class CSAD:
 # seastate = Wave(Hs, Tp, waveAngle, regular=True)
 # seastate.updateHeading(vessel.eta[5]) #Set heading must be called every time updateStates() are called!
 
-# # def loop():
-# #     # Update loads:
-# #     tauWave = seastate.getWaveLoads() #!
-# #     tauThrust = vessel.thrustDynamics.getThrustLoads()
-# #     #Update vessel dynamics:
-# #     vessel.updateStates(tauWave, tauThrust, seastate.frequency)
-# #     seastate.updateHeading(vessel.eta[5])  #Set heading must be called every time updateStates() are called!
+# def loop():
+#     # Update loads:
+#     tauWave = seastate.getWaveLoads() #!
+#     tauThrust = vessel.thrustDynamics.getThrustLoads()
+#     #Update vessel dynamics:
+#     vessel.updateStates(tauWave, tauThrust, seastate.frequency)
+#     seastate.updateHeading(vessel.eta[5])  #Set heading must be called every time updateStates() are called!
     
     
-#     # return 0
+    # return 0

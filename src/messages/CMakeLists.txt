@@ -8,8 +8,9 @@ project(messages)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
+  roscpp
+  rospy
   message_generation
-  message_runtime
   nav_msgs
   sensor_msgs
   std_msgs
@@ -53,6 +54,7 @@ add_message_files(
   FILES
   observer_message.msg
   reference_message.msg
+  regulator_message.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -105,7 +107,7 @@ generate_messages(
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-CATKIN_DEPENDS message_runtime
+  CATKIN_DEPENDS message_runtime
 )
 
 ###########

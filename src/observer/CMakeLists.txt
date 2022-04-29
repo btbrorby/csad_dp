@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   messages
   dynamic_reconfigure
+  simulator
 )
 
 ## System dependencies are found with CMake's conventions
@@ -121,6 +122,7 @@ catkin_package(
 include_directories(
 # include
   ${catkin_INCLUDE_DIRS}
+  simulator/include
 )
 
 ## Declare a C++ library

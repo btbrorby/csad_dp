@@ -4,11 +4,8 @@ from sensor_msgs.msg import Joy
 from nav_msgs.msg import Odometry
 import numpy as np
 import dynamic_reconfigure.client
-from std_msgs.msg import Float64MultiArray, Float64
+from std_msgs.msg import Float64MultiArray
 from messages.msg import observer_message, reference_message
-
-
-
 class Controller():
     """
     The controller listens to the /joy topic and maps all input signals from the DS4 to a variable that can be called
@@ -50,8 +47,8 @@ class UVector():
     Only used for manual controller
     """
     def __init__(self):
-        self.Udata = np.zeros(5)
-        self.pub = rospy.Publisher('/CSAD/u', Float64MultiArray, queue_size = 1)
+        self.Udata = np.zeros([12, 1])
+        # self.pub = rospy.Publisher('/CSAD/u', Float64MultiArray, queue_size = 1)
         self.message = Float64MultiArray()
 
     def publish(self, data):
@@ -66,9 +63,9 @@ class Observer_Converser():
     def __init__(self):
         self.observer_msg = observer_message()
         self.sub = rospy.Subscriber('/CSAD/state_estimate', observer_message, queue_size=1)
-        self.eta_hat = np.array([0, 0, 0])
-        self.nu_hat = np.array([0, 0, 0])
-        self.bias_hat = np.array([0, 0 ,0])
+        self.eta_hat = np.zeros([3, 1])
+        self.nu_hat = np.zeros([3, 1])
+        self.bias_hat = np.zeros([3, 1])
 
     def callback(self, msg):
         self.eta_hat = msg.eta
@@ -86,9 +83,9 @@ class Reference_Converser():
     def __init__(self):
         self.ref_msg = reference_message()
         self.sub = rospy.Subscriber('/CSAD/reference', reference_message, queue_size=1)
-        self.eta_d = np.array([0, 0, 0])
-        self.eta_ds = np.array([0, 0, 0])
-        self.eta_ds2 = np.array([0, 0, 0])
+        self.eta_d = np.zeros([3, 1])
+        self.eta_ds = np.zeros([3, 1])
+        self.eta_ds2 = np.zeros([3, 1])
 
     # Callback function is called when the topic is updated
     def callback(self, msg):
@@ -113,10 +110,10 @@ class Controller_Gains():
     """
     # Initialize all gains to zero
     def __init__(self):
-        self.Kp = np.zeros(3)
-        self.Kd = np.zeros(3)
-        self.Ki = np.zeros(3)
-        self.Kb = np.zeros(3)
+        self.Kp = np.zeros([3, 3])
+        self.Kd = np.zeros([3, 3])
+        self.Ki = np.zeros([3, 3])
+        self.Kb = np.zeros([3, 3])
         self.mu = 0
         self.Uref = 0
 
@@ -143,10 +140,12 @@ class Controller_Gains():
 
 class Tau():
     def __init__(self):
+        self.tau_msg = Float64MultiArray()
         self.pub = rospy.Publisher("/CSAD/tau", Float64MultiArray, queue_size=1)
-        self.tau = np.array([0, 0, 0])
-        self.z = np.array([0.0, 0.0, 0.0])
+        self.tau = np.zeros([3, 1])
+        self.z = np.zeros([3, 1])
         self.mode = False
+        self.time = 0.0
 
     def updateTau(self, msg):
         self.tau = msg.data
@@ -159,6 +158,11 @@ class Tau():
     
     def publish(self, tau):
         self.tau = tau
+        self.tau_msg.data = tau
+        # self.tau_msg.data[0] = tau[0]
+        # self.tau_msg.data[1] = tau[1]
+        # self.tau_msg.data[2] = tau[2]
+        self.pub.publish(self.tau_msg)
         
     
     def getTau(self):
@@ -182,7 +186,7 @@ def controllNodeInit():
     node = rospy.init_node('Controller_node')
     rospy.Subscriber("/joy", Joy, ps4.updateState)
     rospy.Subscriber("/CSAD/state_estimate", observer_message, observer.callback)
-    rospy.Subscriber("/CSAD/reference", reference_message, reference.callback)
+    # rospy.Subscriber("/CSAD/reference", reference_message, reference.callback)
     gain_client = dynamic_reconfigure.client.Client('gain_server', timeout=30, config_callback = gains.callback)
     
 

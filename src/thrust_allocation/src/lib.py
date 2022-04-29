@@ -8,7 +8,7 @@ import numpy as np
 
 class UVector():
     def __init__(self):
-        self.Udata = np.zeros(12)
+        self.Udata = np.zeros([12, 1])
         self.pub = rospy.Publisher('/CSAD/u', Float64MultiArray, queue_size=1)
         self.u_message = Float64MultiArray()
 
@@ -38,7 +38,7 @@ tau  = Tau()
 
 # Initialize observer node
 def thrusterNodeInit():
-    global pub, node
+    global node
     node = rospy.init_node('Allocation_node')
     rospy.Subscriber("/CSAD/tau", Float64MultiArray, Tau.updateTau)
     

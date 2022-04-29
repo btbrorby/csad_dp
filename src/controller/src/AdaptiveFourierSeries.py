@@ -1,15 +1,12 @@
 #!/usr/bin/env python
-from tkinter import Label
 import rospy
 import numpy as np
-import math
 from lib import odometry, observer, reference, ps4, u_data, gains, tau
 #from src.lib import tau
 from math_tools import Rzyx, rad2pipi
-from nav_msgs.msg import Odometry
-from std_msgs.msg import Float64MultiArray
 from matplotlib import pyplot as plt
-
+import yaml
+import os
 
 class AdaptiveFourierSeries:
     def __init__(self, dt, eta0=np.zeros([3,1]), nu0=np.zeros([3,1]), eta_d=np.zeros([3,1]), eta_d_dot=np.zeros([3,1]), eta_d_dotdot=np.zeros([3,1])):
@@ -53,11 +50,14 @@ class AdaptiveFourierSeries:
 
         
         
-    def updateStates(self, eta, nu):
+    def updateStates(self, eta, nu, eta_d=np.zeros([3,1]), eta_d_dot=np.zeros([3,1]), eta_d_dotdot=np.zeros([3,1])):
         self.eta = eta
         self.nu = nu
+        self.eta_d = eta_d
+        self.eta_d_dot = eta_d_dot
+        self.eta_d_dotdot = eta_d_dotdot
 
-    def controller(self, time):
+    def getControllerOutput(self, time):
         R = Rzyx(self.eta[2])
         R_transpose = np.transpose(R)
         S = np.array([[0.0, self.nu[2], 0.0],
@@ -89,6 +89,30 @@ class AdaptiveFourierSeries:
             regressor.append(np.cos(frequencies[i]*time))
             regressor.append(np.sin(frequencies[i]*time))
         return regressor
+    
+    
+path = os.path.dirname(os.getcwd())
+with open(r"{0}/csad_dp_ws/src/controller/src/params.yaml".format(path)) as file:
+    params = yaml.load(file, Loader=yaml.Loader)
+
+dt = 1.0/params["runfrequency"]
+controller = AdaptiveFourierSeries(dt)
+
+def loop():
+    eta_hat = observer.eta_hat
+    nu_hat = observer.nu_hat
+    bias_hat = observer.bias_hat
+    
+    eta_ref = reference.eta_d
+    nu_ref = reference.eta_ds #Is this right?
+    eta_ref = np.array([0.0, 0.0, 0.0])
+    nu_ref = np.array([0.0, 0.0, 0.0])
+    
+    controller.updateStates(eta_hat, nu_hat)
+    controlOutput = controller.getControllerOutput(tau.time)
+    tau.publish(controlOutput)
+    tau.time += dt
+    
 
 # controller = AdaptiveFourierSeries(0.01, eta0=np.array([1.0, 2.0, 3.0]).reshape((3,1)))
 

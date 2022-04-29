@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import rospy
 from observer import loop
+# from observer.src.observer import loop
 from lib import observerNodeInit, nodeEnd
 import os 
 import yaml

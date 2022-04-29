@@ -1,0 +1,26 @@
+<launch>
+    <node pkg="simulator"
+        type="simulator_node.py"
+        name="simulator_node"
+        output="screen">
+        <param name="publish_tf" value="true"/>
+        <param name="fixed_frame_id" value="simulator"/>
+        <rosparam param="model_list">[]</rosparam>
+    </node>
+    <node pkg="gain_server"
+        type="server.py"
+        name="gain_server">
+    </node>
+    <node pkg="observer"
+        type="observer_node.py"
+        name="Observer_node">
+    </node>
+    <node pkg="controller"
+        type="controller_node.py"
+        name="Controller_node">
+    </node>
+    <node pkg="thrust_allocation"
+        type="allocation_node.py"
+        name="ThrustAllocation_node">
+    </node>
+</launch>

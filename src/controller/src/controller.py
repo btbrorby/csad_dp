@@ -1,11 +1,8 @@
 #!/usr/bin/env python
-from unittest import case
-#from lib import Qualisys
 import rospy
 import numpy as np
 import math
 from lib import odometry, observer, reference, ps4, u_data, gains, tau
-#from src.lib import tau
 from math_tools import Rzyx, rad2pipi
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Float64MultiArray
@@ -102,7 +99,6 @@ def biasDP(eta_hat, nu_hat, bias_hat, eta_ref, nu_ref, Kp, Kb, Kd):
     
 def loop():
 
-
     eta_hat = observer.eta_hat
     nu_hat = observer.nu_hat
     bias_hat = observer.bias_hat
@@ -112,28 +108,30 @@ def loop():
     eta_ref = np.array([0.0, 0.0, 0.0])
     nu_ref = np.array([0.0, 0.0, 0.0])
     
-    
     Kp = gains.Kp
     Ki = gains.Ki
     Kd = gains.Kd
-    Kb = gains.Kb
     
     z = tau.getIntegralAction()
     
     mode = tau.mode
     
+    tau_d, z = pid(eta_hat, nu_hat, bias_hat, z, eta_ref, nu_ref, Kp, Ki, Kd)
+    tau.updateIntegralAction(z)
+    tau.publish(tau_d)
+    
     # if CIRCLE is pressed, mode shift between manual control and dp control
     # if X is pressed, thrusters is set to zero
-    if (ps4.circle == 1 and mode == True) or (ps4.circle == 0 and mode == False):
-        u = sixaxis2thruster(ps4.lStickX, ps4.lStickY, ps4.rStickX, ps4.rStickY, ps4.x)
-        u_data.publish(u)
-        mode = False
-    elif (ps4.circle == 1 and mode == False) or (ps4.circle == 0 and mode == True):
-        tau_d, z = pid(eta_hat, nu_hat, bias_hat, z, eta_ref, nu_ref, Kp, Ki, Kd)
-        #tau_d = biasDP(eta_hat, nu_hat, bias_hat, eta_ref, nu_ref, Kp, Kb, Kd)
-        tau.updateIntegralAction(z)
-        tau.publish(tau_d)
-        mode = True
+    # if (ps4.circle == 1 and mode == True) or (ps4.circle == 0 and mode == False):
+    #     u = sixaxis2thruster(ps4.lStickX, ps4.lStickY, ps4.rStickX, ps4.rStickY, ps4.x)
+    #     u_data.publish(u)
+    #     mode = False
+    # elif (ps4.circle == 1 and mode == False) or (ps4.circle == 0 and mode == True):
+    #     tau_d, z = pid(eta_hat, nu_hat, bias_hat, z, eta_ref, nu_ref, Kp, Ki, Kd)
+    #     #tau_d = biasDP(eta_hat, nu_hat, bias_hat, eta_ref, nu_ref, Kp, Kb, Kd)
+    #     tau.updateIntegralAction(z)
+    #     tau.publish(tau_d)
+    #     mode = True
     
     """
     All calls to functions and methods should be handled inside here. loop() is called by the main-function in ctrl_node.py

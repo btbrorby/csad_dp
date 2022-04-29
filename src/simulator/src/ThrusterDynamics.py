@@ -18,7 +18,7 @@ timeStep = 1.0/params["runfrequency"]
       
 #This class should maybe be in separate python file?
 class ThrusterDynamics:
-    def __init__(self, u, dt=timeStep):
+    def __init__(self, u=np.zeros([12,1]), dt=timeStep):
         #Initialize thruster dynamics
         self.loads = np.zeros(6)
         self.u = u[0:6]
@@ -118,7 +118,7 @@ class ThrusterDynamics:
         return self.loads
     
     def updateU(self, controlInput):
-        self.u = controlInput[0:6]
-        self.alpha = controlInput[6:12]
+        self.u = controlInput.data[0:6]
+        self.alpha = controlInput.data[6:12]
 
     

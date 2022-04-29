@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from math import tau
+from pydoc import importfile
 from math_tools import quat2eul, Rzyx
 import rospy
 from std_msgs.msg import Float64MultiArray
@@ -15,7 +15,7 @@ class Qualisys():
     """
     def __init__(self):
         self.odom = Odometry()
-        self.eta = np.zeros(3)
+        self.eta = np.zeros([3, 1])
         
         #For visualization
         self.true_pos_msg = Vector3()
@@ -46,7 +46,7 @@ class Qualisys():
 
 class Tau():
     def __init__(self):
-        self.tau = np.array([0.0, 0.0, 0.0])
+        self.tau = np.zeros([3, 1])
 
     def updateTau(self, msg):
         self.tau = msg.data
@@ -58,9 +58,9 @@ class Observer_Converser():
     def __init__(self):
         self.observer_msg = observer_message()
         self.pub = rospy.Publisher('/CSAD/state_estimate', observer_message, queue_size=1)
-        self.eta_hat = np.array([0, 0, 0])
-        self.nu_hat = np.array([0, 0, 0])
-        self.bias_hat = np.array([0, 0 ,0])
+        self.eta_hat = np.zeros([3, 1])
+        self.nu_hat = np.zeros([3, 1])
+        self.bias_hat = np.zeros([3, 1])
         
         #For visualization
         self.xyz_msg = Vector3()
@@ -90,10 +90,10 @@ class Observer_Converser():
 
 class Observer_Gains():
     def __init__(self):
-        self.L1 = np.zeros(3)
-        self.L2 = np.zeros(3)
-        self.L3 = np.zeros(3)
-        self.L4 = np.zeros(3)
+        self.L1 = np.zeros([3,3])
+        self.L2 = np.zeros([3,3])
+        self.L3 = np.zeros([3,3])
+        self.L4 = np.zeros([3,3])
         
 
     def get_observer_gains(self):
@@ -116,8 +116,8 @@ tau  = Tau()
 
 # Initialize observer node
 def observerNodeInit():
-    global pub, node
-    node = rospy.init_node("Observer_node")
+    global node
+    node = rospy.init_node('Observer_node')
     rospy.Subscriber("/qualisys/Body_1/odom", Odometry, qualisys.updateQualisysOdometry) #check rostopic list for actual name on odom message!
     rospy.Subscriber("/CSAD/tau", Float64MultiArray, Tau.updateTau)
     gain_client = dynamic_reconfigure.client.Client('gain_server', timeout=30, config_callback = gains.callback)
