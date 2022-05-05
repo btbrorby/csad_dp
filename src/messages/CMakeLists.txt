@@ -55,6 +55,7 @@ add_message_files(
   observer_message.msg
   reference_message.msg
   regulator_message.msg
+  wave_message.msg
 )
 
 ## Generate services in the 'srv' folder

@@ -1,0 +1,46 @@
+seastates:
+  calm:
+    Hs_min: 0.0
+    Hs_max: 0.001
+    Tp_min: 0.51
+    Tp_max: 0.6
+  smooth:
+    Hs_min: 0.001
+    Hs_max: 0.006
+    Tp_min: 0.60
+    Tp_max: 0.71
+  slight:
+    Hs_min: 0.006
+    Hs_max: 0.014
+    Tp_min: 0.71
+    Tp_max: 0.84
+  moderate:
+    Hs_min: 0.014
+    Hs_max: 0.028
+    Tp_min: 0.84
+    Tp_max: 0.97
+  rough:
+    Hs_min: 0.028
+    Hs_max: 0.044
+    Tp_min: 0.97
+    Tp_max: 1.10
+  very_rough:
+    Hs_min: 0.044
+    Hs_max: 0.067
+    Tp_min: 1.10
+    Tp_max: 1.25
+  high:
+    Hs_min: 0.067
+    Hs_max: 0.10
+    Tp_min: 1.25
+    Tp_max: 1.44
+  very_high:
+    Hs_min: 0.1
+    Hs_max: 0.156
+    Tp_min: 1.44
+    Tp_max: 1.70
+  Phenomenal:
+    Hs_min: 0.156
+    Hs_max: 
+    Tp_min: 1.70
+    Tp_max:

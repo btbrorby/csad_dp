@@ -75,11 +75,10 @@ class Observer_Converser():
         self.nu_hat = msg.nu
         self.bias_hat = msg.bias
 
-    def publish(self, eta_hat, nu_hat, bias_hat, time):
+    def publish(self, eta_hat, nu_hat, bias_hat):
         self.observer_msg.eta = eta_hat
         self.observer_msg.nu = nu_hat
         self.observer_msg.bias = bias_hat
-        self.observer_msg.time = time
         self.pub.publish(self.observer_msg)
         
         self.xyz_msg.x = eta_hat[0]

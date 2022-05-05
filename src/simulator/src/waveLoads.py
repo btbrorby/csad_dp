@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from cmath import phase, pi
+from random import setstate
 from turtle import heading, shape
 import numpy as np
 import math
@@ -12,6 +13,8 @@ import generateModelData_CSAD as data
 import matplotlib.pyplot as plt
 
 from std_msgs.msg import Float64MultiArray
+from std_msgs.msg import Float32
+from messages.msg import wave_message
 
 import rospy
 
@@ -25,11 +28,31 @@ with open(r"{0}/csad_dp_ws/src/simulator/src/params.yaml".format(path)) as file:
 global timeStep
 timeStep = 1.0/params["runfrequency"]
 
-
+with open(r"{0}/csad_dp_ws/src/simulator/include/seastateDefinitions.yaml".format(path)) as file:
+    states = yaml.load(file, Loader=yaml.Loader)
 
 class Wave():
-    def __init__(self, Hs, Tp, waterDepth=np.infty, angle=0, deltaFrequency=0.1, regular=True, dt=timeStep):
+    def __init__(self, Hs, Tp, stateDescription='calm', waterDepth=np.infty, angle=0.0, deltaFrequency=0.1, regular=True, dt=timeStep):
+        """
+        StateDescription defines realistic sea states where the valid area for Hs and Tp is defined.
+        Can choose between 'calm', 'smooth', 'slight', 'moderate', 'rough', 'very_rough', 'high', 'very_high' or 'phenomenal'.
+        If nothing is stated, then Hs and Tp will be overwritten to closest value within default 'calm'.
+        If the Hs or Tp is outside the valid area, they will be overwritten to closest value within valid area.
+        """
+        Hs_min = states['seastates'][stateDescription]['Hs_min']
+        Hs_max = states['seastates'][stateDescription]['Hs_max']
+        Tp_min = states['seastates'][stateDescription]['Tp_min']
+        Tp_max = states['seastates'][stateDescription]['Tp_max']
         
+        if stateDescription == 'calm':
+            self.Hs = Hs_max
+            self.Tp = Tp_max
+        if Hs_min > Hs: self.Hs = Hs_min
+        elif Hs_max < Hs: self.Hs = Hs_max    
+        else: self.Hs = Hs
+        if Tp_min > Tp: self.Tp = Tp_min
+        elif Tp_max < Tp: self.Tp = Tp_max
+        else: self.Tp = Tp
         self.dt = dt
         
         self.Hs = Hs
@@ -48,30 +71,32 @@ class Wave():
         # self.dT = 0.2 #unused
         
         self.w1 = 2.0*pi*1.3/self.Tp
-        self.a = 0.11*(self.Hs**2)*self.w1
-        self.b = 0.44*(self.w1**4)
+        self.a = 0.11*(self.Hs**2.0)*self.w1
+        self.b = 0.44*(self.w1**4.0)
         self.m0 = self.a/(4.0*self.b)
         self.Hm0 = 4.0*math_tools.sqrt(self.m0)
-        self.spectrumFrequencies = np.arange(3.6*math_tools.sqrt(self.Hm0), 5.0*math_tools.sqrt(self.Hm0), self.dw)
+        # self.spectrumFrequencies = np.arange(3.6*math_tools.sqrt(self.Hm0), 5.0*math_tools.sqrt(self.Hm0), self.dw)
+        self.spectrumFrequencies = np.arange(2.0*np.pi/Tp_max, 2.0*np.pi/Tp_min, self.dw)
         # self.spectrumFrequencies = np.arange(data.frequencies[0], self.frequency, self.dw) #Set upper and lower values!
         
         #Initial guess for wave number:
         self.k = self.getWaveNumber(initial=True)
-    
+        self.measurementDistance = 0.0
         self.regular = regular #True = regular, False = irregular
         
         self.time = 0.0
         
         [self.elementAmplitude, self.elementFrequencies, self.elementPhase] = self.generateIrregular()
         
-        self.msg_waveMeasurement = Float64MultiArray()
-        self.pub_waveMeasurement = rospy.Publisher('/waveElevation', Float64MultiArray, queue_size=1)
+        self.pub_waveMeasurement = rospy.Publisher('/waveElevation', Float32, queue_size=1)
+        
         
     def publish(self):
-        self.msg_waveMeasurement[0] = self.getWaveElevation()
-        self.msg_waveMeasurement[1] = self.frequency
+        msg_waveMeasurement = Float32()
+        msg_waveMeasurement.data = self.getWaveElevation(self.time)
+        # msg_waveMeasurement.data = self.frequency
         
-        self.pub_waveMeasurement.publish(self.msg_waveMeasurement)
+        self.pub_waveMeasurement.publish(msg_waveMeasurement)
         
     def updateHeading(self, heading):
         """
@@ -96,17 +121,17 @@ class Wave():
                 frequencyIndex = np.argmin(np.abs(data.frequencies - w))
                 
                 forceAmp = np.array([data.RAO_FORCE['amp'][0][frequencyIndex, headingIndex,0],
-                                    data.RAO_FORCE['amp'][1][frequencyIndex, headingIndex,0],
-                                    data.RAO_FORCE['amp'][2][frequencyIndex, headingIndex,0],
-                                    data.RAO_FORCE['amp'][3][frequencyIndex, headingIndex,0],
-                                    data.RAO_FORCE['amp'][4][frequencyIndex, headingIndex,0],
-                                    data.RAO_FORCE['amp'][5][frequencyIndex, headingIndex,0]])
+                                     data.RAO_FORCE['amp'][1][frequencyIndex, headingIndex,0],
+                                     data.RAO_FORCE['amp'][2][frequencyIndex, headingIndex,0],
+                                     data.RAO_FORCE['amp'][3][frequencyIndex, headingIndex,0],
+                                     data.RAO_FORCE['amp'][4][frequencyIndex, headingIndex,0],
+                                     data.RAO_FORCE['amp'][5][frequencyIndex, headingIndex,0]])
                 forcePhase = np.array([data.RAO_FORCE['phase'][0][frequencyIndex, headingIndex,0],
-                                    data.RAO_FORCE['phase'][1][frequencyIndex, headingIndex,0],
-                                    data.RAO_FORCE['phase'][2][frequencyIndex, headingIndex,0],
-                                    data.RAO_FORCE['phase'][3][frequencyIndex, headingIndex,0],
-                                    data.RAO_FORCE['phase'][4][frequencyIndex, headingIndex,0],
-                                    data.RAO_FORCE['phase'][5][frequencyIndex, headingIndex,0]])
+                                       data.RAO_FORCE['phase'][1][frequencyIndex, headingIndex,0],
+                                       data.RAO_FORCE['phase'][2][frequencyIndex, headingIndex,0],
+                                       data.RAO_FORCE['phase'][3][frequencyIndex, headingIndex,0],
+                                       data.RAO_FORCE['phase'][4][frequencyIndex, headingIndex,0],
+                                       data.RAO_FORCE['phase'][5][frequencyIndex, headingIndex,0]])
                 firstOrderLoad = np.add(firstOrderLoad, np.abs(forceAmp)*waveAmplitude[count]*np.cos(w*self.time + forcePhase + wavePhase[count]))
                 
                 count += 1
@@ -144,14 +169,14 @@ class Wave():
                 driftCoefficient = np.array([data.driftForceAmpX[frequencyIndex, headingIndex],
                                     data.driftForceAmpY[frequencyIndex, headingIndex],
                                     data.driftForceAmpPsi[frequencyIndex, headingIndex]])
-                driftLoads = np.add(driftLoads, np.abs(driftCoefficient)*np.power(waveAmplitude[count],2))
+                driftLoads = np.add(driftLoads, np.abs(driftCoefficient)*np.power(waveAmplitude[count],2.0))
                 count += 1
         else:
             frequencyIndex = np.argmin(np.abs(data.driftForceFreq - waveFreq))
             driftCoefficient = np.array([data.driftForceAmpX[frequencyIndex, headingIndex],
                                 data.driftForceAmpY[frequencyIndex, headingIndex],
                                 data.driftForceAmpPsi[frequencyIndex, headingIndex]])
-            driftLoads = np.abs(driftCoefficient)*(waveAmplitude**2)
+            driftLoads = np.abs(driftCoefficient)*(waveAmplitude**2.0)
         
         driftLoads = math_tools.three2sixDof(driftLoads)
         return driftLoads
@@ -199,7 +224,7 @@ class Wave():
             xElement = np.sum(waveAmplitude*(np.power(np.abs(driftCoefficient[0]), 0.5))*np.cos(waveFreq*self.time + phaseLag))
             yElement = np.sum(waveAmplitude*(np.power(np.abs(driftCoefficient[1]), 0.5))*np.cos(waveFreq*self.time + phaseLag))
             psiElement = np.sum(waveAmplitude*(np.power(np.abs(driftCoefficient[2]), 0.5))*np.cos(waveFreq*self.time + phaseLag))
-            slowlyVaryingLoads = np.array([2.0*np.power(xElement, 2.0), 2*np.power(yElement, 2), 2*np.power(psiElement, 2)])
+            slowlyVaryingLoads = np.array([2.0*np.power(xElement, 2.0), 2*np.power(yElement, 2.0), 2.0*np.power(psiElement, 2.0)])
             
         slowlyVaryingLoads = math_tools.three2sixDof(slowlyVaryingLoads)
         return slowlyVaryingLoads
@@ -230,17 +255,18 @@ class Wave():
         sumLoads = np.add(driftLoads, slowlyVaryingLoads) 
         sumLoads = np.add(sumLoads, firstOrderLoads)
         
-        return firstOrderLoads #driftLoads #firstOrderLoads #slowlyVaryingLoads #sumLoads
+        return driftLoads #driftLoads #firstOrderLoads #slowlyVaryingLoads #sumLoads
     
     
         
     def getWaveNumber(self, initial=False):
         """
-        Estimates the wave number based on the dispertion relation.
+        Estimates the wave number based on the dispertion relation. 
+        Make sure that the wave depth is set correctly before calling.
         """
         if (initial==False):
             #Checks if deepwater assumptions are valid:
-            if ((self.waterDepth*(self.frequency**2))/(data.g*2*pi) >= 0.5):
+            if ((self.waterDepth*(self.frequency**2.0))/(data.g*2.0*np.pi) >= 0.5):
                 deepWater = False
             else:
                 deepWater = True
@@ -250,14 +276,14 @@ class Wave():
        
         
         if (deepWater==False):
-            f = data.g*self.k*np.math.tanh(self.k*self.waterDepth) - self.frequency**2
+            f = data.g*self.k*np.math.tanh(self.k*self.waterDepth) - self.frequency**2.0
             while (np.abs(f) >= 0.1):
                 self.k += 0.0001
-                f = data.g*self.k*np.math.tanh(self.k*self.waterDepth) - self.frequency**2
+                f = data.g*self.k*np.math.tanh(self.k*self.waterDepth) - self.frequency**2.0
                 
             return self.k
         else:
-            return (self.frequency**2)/data.g
+            return (self.frequency**2.0)/data.g
     
     
     # def generateWave(self, x=0):
@@ -281,26 +307,18 @@ class Wave():
     
     def defineSpectrum(self, frequency):
         """JONSWAP"""
-        spectrum = self.alpha*((data.g**2)/frequency**5)*np.exp(-(5/4)*(self.frequency/frequency)**4)
+        
+        spectrum = self.alpha*((data.g**2.0)/frequency**5.0)*np.exp(-(5.0/4.0)*(self.frequency/frequency)**4.0)
         gamma = self.gamma*np.ones(np.shape(spectrum))
-        if np.size(frequency) > 1:
-            # sigma = []
-            for w in frequency:
-                if w <= self.frequency:
-                    # sigma.append(0.07)
-                    sigma = 0.07
-                else: 
-                    # sigma.append(0.09)
-                    sigma = 0.09
-        else:
-            if frequency <= self.frequency:
-                sigma = 0.07
-            else: 
-                sigma = 0.09
         
-        factor = gamma**(np.exp(-0.5*(np.divide((frequency-self.frequency),(np.multiply(sigma,self.frequency))))**2))
+        if frequency <= self.frequency:
+            sigma = 0.07
+            
+        else: 
+            sigma = 0.09
+        
+        factor = gamma**(np.exp(-0.5*(np.divide((frequency-self.frequency),(np.multiply(sigma,self.frequency))))**2.0))
         spectrum *= factor
-        
         
         """Gaussian swell spectrum"""
         # sigma = 0.1
@@ -310,84 +328,94 @@ class Wave():
     
 
     def generateIrregular(self):
-        # k = self.getWaveNumber()
-        elementAmplitude = []
-        elementFrequencies = []
-        elementPhase = []
+        """This functions should only be called in the constructor when the sea state is defined."""
+        
+        elementFrequencies = self.spectrumFrequencies
+        elementAmplitude = np.zeros(len(elementFrequencies))
+        elementPhase = np.zeros(len(elementFrequencies))
+        spectrums = np.zeros(len(elementFrequencies))
+        count = 0
         for w in self.spectrumFrequencies:
-            
             spectrum = self.defineSpectrum(w)
-            elementAmplitude.append(math_tools.sqrt(2.0*spectrum*self.dw))  #contains all wave amplitudes
-            elementFrequencies.append(w)
-            elementPhase.append(2*pi*np.random.rand())
+            spectrums[count] = spectrum
+            elementAmplitude[count] = math_tools.sqrt(2.0*spectrum*self.dw) #contains all wave amplitudes
+            elementPhase[count] = 2.0*pi*np.random.rand()
+            count +=1
+        
+        # elementAmplitude = np.array(elementAmplitude).astype(float)
+        # elementFrequencies = np.array(elementFrequencies).astype(float)
+        # elementPhase = np.array(elementPhase).astype(float)
+        # elementFrequencies = elementFrequencies.astype(float)
+        fig = plt.figure()
+        plt.plot(elementFrequencies/(2.0*np.pi), spectrums)
             
         return elementAmplitude, elementFrequencies, elementPhase
         
-        
-    def getWaveElevation(self, stopTime=30):
-        """Returns time array and a wave elevation array. Pr 14.04.2022, not made for useage in control system."""
-        time = np.arange(0.0, stopTime, self.dt)
-        elevation = []
-        
-        if (self.regular == True):
-            for t in time:
-                elevation.append(self.amplitude*np.cos(self.frequency*t)) #should include ther term -k*x based on where the elevation are measured.
-        else:
-            for t in time:
-                e = 0
-                counter = 0
-                for w in self.elementFrequencies:
-                    e += self.elementAmplitude[counter]*np.cos(self.elementFrequencies[counter]*t + self.elementPhase[counter])
-                    counter += 1
-                elevation.append(e)
-                    
-        return time, elevation
-        
-
-
-
-# seastate = Wave(2.0*1.0, 1.0, regular=True)
-# seastate.updateHeading(0.0)
-# t = 0.0
-# time = []
-# tauX = []
-# tauY = []
-# tauZ = []
-# while t < 10:
-#     [loadX, loadY, loadZ] = seastate.getWaveLoads()[0:3]
-#     time.append(t)
-#     tauX.append(loadX)
-#     tauY.append(loadY)
-#     tauZ.append(loadZ)
-#     t += seastate.dt
+    def setMeasurementDistance(self, x=0.0):
+        self.measurementDistance = x
     
-# [tE, elev] = seastate.getWaveElevation(10.0)
-# Tstr = 'Mean drift: Tp = ' + str(2*pi/seastate.frequency) + ', Hs = ' + str(seastate.Hs)
+    def getWaveElevation(self, time):
+        """Returns time array and a wave elevation array. Pr 14.04.2022, not made for useage in control system."""
+        x = self.measurementDistance
+        
+        amplitudes = self.elementAmplitude
+        frequencies = self.elementFrequencies
+        phases = 2.0*np.pi*np.random.normal(len(self.elementPhase))
+        k = np.power(frequencies, 2.0)/data.g
+        if (self.regular == True):
+            elevation = self.amplitude*np.cos(self.frequency*time - k*x)
+        else:
+            frequencies += np.random.normal(loc=0.0,scale=self.dw/2.0, size=len(frequencies))
+            elevation = np.sum(amplitudes*np.cos(frequencies*time - k*x + phases))
+        return elevation
+        
 
-# fig,axs = plt.subplots(4,1)
-# plt.sca(axs[0])
-# plt.title(Tstr)
-# plt.plot(time, tauX)
-# plt.grid()
-# plt.legend(['force x'])
-# plt.sca(axs[1])
-# plt.plot(time, tauY)
-# plt.grid()
-# plt.legend(['force y'])
-# plt.sca(axs[2])
-# plt.plot(time, tauZ)
-# plt.grid()
-# plt.legend(['force z'])
+
+
+seastate = Wave(0.06, 1.15, stateDescription='very_rough', regular=False)
+seastate.updateHeading(0.0)
+t = 0.0
+time = []
+tauX = []
+tauY = []
+tauZ = []
+elev = []
+while t < 50:
+    [loadX, loadY, loadZ] = seastate.getWaveLoads()[0:3]
+    time.append(t)
+    tauX.append(loadX)
+    tauY.append(loadY)
+    tauZ.append(loadZ)
+    elev.append(seastate.getWaveElevation(t))
+    t += seastate.dt
+    
+
+Tstr = 'Mean drift: Tp = ' + str(2*pi/seastate.frequency) + ', Hs = ' + str(seastate.Hs)
+
+fig,axs = plt.subplots(4,1)
+plt.sca(axs[0])
+plt.title(Tstr)
+plt.plot(time, tauX)
+plt.grid()
+plt.legend(['force x'])
+plt.sca(axs[1])
+plt.plot(time, tauY)
+plt.grid()
+plt.legend(['force y'])
+plt.sca(axs[2])
+plt.plot(time, tauZ)
+plt.grid()
+plt.legend(['force z'])
 # # plt.sca(axs[1])
 # # plt.plot(2*pi/time, f)
 
-# plt.sca(axs[3])
-# plt.plot(tE, elev)
-# plt.grid()
-# plt.legend(['wave elevation'])
+plt.sca(axs[3])
+plt.plot(time, elev)
+plt.grid()
+plt.legend(['wave elevation'])
 
 
-# plt.show()
+plt.show()
 
 
 

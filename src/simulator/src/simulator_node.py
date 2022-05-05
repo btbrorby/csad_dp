@@ -32,14 +32,10 @@ thrusters = ThrusterDynamics(u0, dt=1.0/rate)
 
 
 #Seastate:
-Hs = 0.4
-Tp = 1.0
-seastate = Wave(Hs, Tp, angle=0, regular = True, dt=1.0/rate)
+Hs = 0.06
+Tp = 1.15
+seastate = Wave(Hs, Tp, stateDescription='rough', angle=2.0*np.pi*4.0/180.0, regular = False, dt=1.0/rate)
 seastate.updateHeading(vessel.eta[5])
-
-    
-
-
     
 if __name__ == '__main__':
 
@@ -73,7 +69,7 @@ if __name__ == '__main__':
         imu3.publish()
         imu4.publish()
         # gnss.publish()
-        # seastate.publish()
+        seastate.publish()
         
         r.sleep()
         # rospy.spin()

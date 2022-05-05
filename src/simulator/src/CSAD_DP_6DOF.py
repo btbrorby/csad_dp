@@ -26,7 +26,7 @@ class CSAD:
     
     def __init__(self, eta0, dt=timeStep):
         self.dt = dt
-        self.time = 0
+        self.time = 0.0
         self.RAOForce = data.RAO_FORCE
         #Initialzing states
         self.eta = eta0
@@ -36,9 +36,9 @@ class CSAD:
         self.nu_dot = np.zeros([6,1])
         self.bias_dot = np.zeros([6,1])
         
-        self.T_b = 1000.0*np.eye(6)   # Tuning bias 2~3 times larger than the wave period(?) Make function for this!
+        self.T_b = 100.0*np.eye(6)   # Tuning bias 2~3 times larger than the wave period(?) Make function for this!
         self.biasMean = 0.0     # Defining white noise
-        self.biasStd = 0.0      # Defining white noise
+        self.biasStd = 0.01      # Defining white noise
         
         #Initionalize thrust dynamics
         self.u = np.zeros([12,1])
@@ -80,7 +80,7 @@ class CSAD:
         self.odometry_msg.twist.twist.angular.x = self.nu[3][0]
         self.odometry_msg.twist.twist.angular.y = self.nu[4][0]
         self.odometry_msg.twist.twist.angular.z = self.nu[5][0]
-        d = rospy.Duration(self.time)
+        # d = rospy.Duration(self.time)
         # print("sec", d.to_sec())
         # print("nsec", d.to_nsec())
         self.odometry_msg.header.stamp = rospy.Time.now()
@@ -149,7 +149,7 @@ class CSAD:
         noise = np.random.normal(self.biasMean, self.biasStd, 6)
         noise = np.resize(noise, (6,1))
         
-        self.bias_dot = np.matmul(-self.T_b, self.bias) + noise
+        self.bias_dot = np.matmul(-np.linalg.inv(self.T_b), self.bias) + noise
         self.bias_dot = self.bias_dot.astype(float)
         
         self.nu_dot = np.matmul(Minv, np.matmul(-B, self.nu) + np.matmul(-C, self.eta) + np.matmul(Jinv, self.bias) + tauEnv + tauThr)
