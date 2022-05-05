@@ -21,7 +21,7 @@ class Qualisys():
         self.true_pos_msg = Vector3()
         self.true_pos_pub = rospy.Publisher('/CSAD/true_position', Vector3, queue_size=1)
 
-    def updateQualisysOdometry(self, data):
+    def updateQualisysOdometry(self, data=Odometry()):
         self.odom = data
 
     def getQualisysOdometry(self):
@@ -48,8 +48,10 @@ class Tau():
     def __init__(self):
         self.tau = np.zeros([3,1])
 
-    def updateTau(self, msg):
-        self.tau = msg.data
+    def callback(self, msg=Float64MultiArray()):
+        self.tau[0] = msg.data[0]
+        self.tau[1] = msg.data[1]
+        self.tau[2] = msg.data[2]
     
     def getTau(self):
         return self.tau
@@ -57,14 +59,14 @@ class Tau():
 class Observer_Converser():
     def __init__(self):
         self.observer_msg = observer_message()
-        self.pub = rospy.Publisher('/CSAD/state_estimate', observer_message, queue_size=1)
+        self.pub = rospy.Publisher('/CSAD/state_estimate', observer_message, queue_size=10)
         self.eta_hat = np.zeros([3,1])
         self.nu_hat = np.zeros([3,1])
         self.bias_hat = np.zeros([3,1])
         
         #For visualization
         self.xyz_msg = Vector3()
-        self.xyzPub = rospy.Publisher('/CSAD/xy_estimate', Vector3, queue_size=1)
+        self.xyzPub = rospy.Publisher('/CSAD/xy_estimate', Vector3, queue_size=10)
         
 
 
@@ -73,12 +75,12 @@ class Observer_Converser():
         self.nu_hat = msg.nu
         self.bias_hat = msg.bias
 
-    def publish(self, eta_hat, nu_hat, bias_hat):
+    def publish(self, eta_hat, nu_hat, bias_hat, time):
         self.observer_msg.eta = eta_hat
         self.observer_msg.nu = nu_hat
         self.observer_msg.bias = bias_hat
+        self.observer_msg.time = time
         self.pub.publish(self.observer_msg)
-        print(eta_hat)
         
         self.xyz_msg.x = eta_hat[0]
         self.xyz_msg.y = eta_hat[1]
@@ -119,8 +121,8 @@ tau  = Tau()
 def observerNodeInit():
     global node
     node = rospy.init_node('Observer_node')
-    rospy.Subscriber("/qualisys/Body_1/odom", Odometry, qualisys.updateQualisysOdometry) #check rostopic list for actual name on odom message!
-    rospy.Subscriber("/CSAD/tau", Float64MultiArray, tau.updateTau)
+    rospy.Subscriber("/qualisys/Body_1/odom", Odometry, callback=qualisys.updateQualisysOdometry) #check rostopic list for actual name on odom message!
+    rospy.Subscriber("/CSAD/tau", Float64MultiArray, callback=tau.callback)
     gain_client = dynamic_reconfigure.client.Client('gain_server', timeout=30, config_callback = gains.callback)
     
     

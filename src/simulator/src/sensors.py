@@ -23,10 +23,10 @@ class GNSS():
         self.dt = dt
         self.time = 0.0
         
-        self.eta = np.zeros(6)
-        self.nu = np.zeros(6)
-        self.eta_dot = np.zeros(6)
-        self.nu_dot = np.zeros(6)
+        self.eta = np.zeros([6,1])
+        self.nu = np.zeros([6,1])
+        self.eta_dot = np.zeros([6,1])
+        self.nu_dot = np.zeros([6,1])
         
         self.signal = True #only used for simulating drop out and frosen points (not in use pr. 23.02.)
         
@@ -54,7 +54,7 @@ class GNSS():
         self.msg_gnss.twist.twist.angular.x = measurementGnss[10]
         self.msg_gnss.twist.twist.angular.x = measurementGnss[11]
         
-        self.msg_gnss.header.stamp.secs = self.time
+        self.msg_gnss.header.stamp = rospy.Time.now()
         self.msg_gnss.header.frame_id = "simulated_qualisys"
         
         self.pub_gnss.publish(self.msg_gnss)
@@ -93,21 +93,21 @@ class IMU():
         self.id = id
         self.topic = '/imu' + str(id)
         self.dt = dt
-        self.nu = np.zeros(6)
-        self.nu_previous = np.zeros(6)
+        self.nu = np.zeros([6,1])
+        self.nu_previous = np.zeros([6,1])
         
-        self.eta = np.zeros(6)
-        self.eta_previous = np.zeros(6)
+        self.eta = np.zeros([6,1])
+        self.eta_previous = np.zeros([6,1])
         
         self.signal = True #only used for simulating drop out and frosen points (not in use pr. 23.02.)
         
-        self.nu_dot = np.zeros(6)
-        self.eta_dot = np.zeros(6)
+        self.nu_dot = np.zeros([6,1])
+        self.eta_dot = np.zeros([6,1])
         
-        self.bias = np.zeros(6)
-        self.bias_dot = np.zeros(6)
-        self.noiseBias = np.zeros(6)
-        self.noiseMeasurement = np.zeros(6)
+        self.bias = np.zeros([6,1])
+        self.bias_dot = np.zeros([6,1])
+        self.noiseBias = np.zeros([6,1])
+        self.noiseMeasurement = np.zeros([6,1])
         
         self.mean = params["imu_properties"]["mean"]
         self.std = params["imu_properties"]["standardDeviation"]
@@ -116,9 +116,8 @@ class IMU():
         self.y = 0.0
         self.z = 0.0
         
-        self.g = [0.0, 0.0, 9.81] #expressed in body frame
-        
-        
+        self.g = np.array([0.0, 0.0, 9.81]) #expressed in body frame
+        self.g = np.resize(self.g, (3,1))
         #For plotting:
         self.biasVec = np.array([])
         
@@ -148,7 +147,7 @@ class IMU():
         
         self.msg_imu.orientation_covariance[0] = -1
         
-        self.msg_imu.header.stamp.secs = self.time
+        self.msg_imu.header.stamp = rospy.Time.now()
         self.msg_imu.header.frame_id = "simulated_imu"
         
         self.pub_imu.publish(self.msg_imu)
@@ -174,6 +173,7 @@ class IMU():
         self.y = locations['y']
         self.z = locations['z']
         loc = np.array([self.x, self.y, self.z])
+        loc = np.resize(loc, (3,1))
         return loc
     
     def bodyToSensorFrame(self):
@@ -195,28 +195,44 @@ class IMU():
     def __getBias(self):
         """Bias term"""
         self.noiseBias = np.random.normal(self.mean, self.std, 6)
+        self.noiseBias = np.resize(self.noiseBias, (6,1))
         self.bias_dot = self.noiseBias
-        self.bias = self.bias + self.bias_dot*self.dt
+        self.bias += self.bias_dot*self.dt
         return self.bias
     
     def __getMeasurementNoise(self):
         w = np.random.normal(self.mean, self.std, 6)
+        w = np.resize(w, (6,1))
         return w
     
-    
+    def getS(self, vec):
+        p = vec[0]
+        q = vec[1]
+        r = vec[2]
+        S = np.array([[0.0, -r, q],
+                      [r, 0.0, -p],
+                      [-q, p, 0.0]])
+        return S
         
     def getAccMeasured(self):
         """Outputs the simulated measurement from one imu in sensor frame"""
         l = self.getImuLocation()
+    
+        S_nu = self.getS(self.nu[3:6])
+        g_dot = np.matmul(-S_nu, self.g)
+        g_dot = g_dot.astype(float)
         
-        g_dot = np.cross(-self.nu[3:6], self.g)
         self.g += g_dot*self.dt
+        
         b = self.__getBias()
         w = self.__getMeasurementNoise()
         
-        a_l = self.nu_dot[0:3] + np.cross(self.nu_dot[3:6], l) + np.cross(self.nu[3:6], np.cross(self.nu[3:6], l))
-        a_m = a_l + np.cross(self.nu[3:6], self.nu[0:3]) + self.g + b[0:3] + w[0:3]
-                
+        a_l = self.nu_dot[0:3] + np.matmul(S_nu, l) + np.matmul(S_nu, np.matmul(S_nu, l))
+        a_l = a_l.astype(float)
+        
+        a_m = a_l + np.matmul(S_nu, self.nu[0:3]) + self.g + b[0:3] + w[0:3]
+        a_m = a_m.astype(float)
+        
         self.time += self.dt
         """Remember to turn the output measurements so that it is equvivalent to the physical setup!!!"""
         return a_m

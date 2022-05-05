@@ -112,6 +112,7 @@ def loop():
     controlOutput = controller.getControllerOutput(tau.time)
     tau.publish(controlOutput)
     tau.time += dt
+    # rospy.spin()
     
 
 # controller = AdaptiveFourierSeries(0.01, eta0=np.array([1.0, 2.0, 3.0]).reshape((3,1)))

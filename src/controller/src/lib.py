@@ -1,6 +1,6 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 import rospy
-from sensor_msgs.msg import Joy
+from sensor_msgs.msg import Joy, Imu
 from nav_msgs.msg import Odometry
 import numpy as np
 import dynamic_reconfigure.client
@@ -62,7 +62,7 @@ class UVector():
 class Observer_Converser():
     def __init__(self):
         self.observer_msg = observer_message()
-        self.sub = rospy.Subscriber('/CSAD/state_estimate', observer_message, queue_size=1)
+        self.sub = rospy.Subscriber('/CSAD/state_estimate', observer_message, queue_size=10)
         self.eta_hat = np.zeros([3,1])
         self.nu_hat = np.zeros([3,1])
         self.bias_hat = np.zeros([3,1])
@@ -141,13 +141,13 @@ class Controller_Gains():
 class Tau():
     def __init__(self):
         self.tau_msg = Float64MultiArray()
-        self.pub = rospy.Publisher("/CSAD/tau", Float64MultiArray, queue_size=1)
+        self.pub = rospy.Publisher("/CSAD/tau", Float64MultiArray, queue_size=10)
         self.tau = np.zeros([3,1])
         self.z = np.zeros([3,1])
         self.mode = False
         self.time = 0.0
 
-    def updateTau(self, msg):
+    def callback(self, msg=Float64MultiArray()):
         self.tau = msg.data
         # self.tau_msg.data.index()
         
@@ -160,7 +160,7 @@ class Tau():
     def publish(self, tau):
         self.tau = tau
         self.tau_msg.data = tau
-        print(tau)
+        # print(tau)
         # self.tau_msg.data[0] = tau[0]
         # self.tau_msg.data[1] = tau[1]
         # self.tau_msg.data[2] = tau[2]
@@ -169,6 +169,32 @@ class Tau():
     
     def getTau(self):
         return self.tau
+    
+class IMU():
+    def __init__(self, id):
+        self.imu_msg = Imu()
+        self.id = id
+        # self.sub1 = rospy.Subscriber("Imu1", Imu, queue_size=1)
+        # self.sub2 = rospy.Subscriber("Imu2", Imu, queue_size=1)
+        # self.sub3 = rospy.Subscriber("Imu3", Imu, queue_size=1)
+        # self.sub4 = rospy.Subscriber("Imu4", Imu, queue_size=1)
+        
+        self.imu = np.zeros([6, 1])
+        self.imu[2] = -9.81
+        
+    def callback(self, msg = Imu()):
+        self.imu_msg = msg
+        self.imu[0] = msg.linear_acceleration.x
+        self.imu[1] = msg.linear_acceleration.y
+        self.imu[2] = msg.linear_acceleration.z
+        self.imu[3] = msg.angular_velocity.x
+        self.imu[4] = msg.angular_velocity.y
+        self.imu[5] = msg.angular_velocity.z
+        
+    
+    def getImuMeasurement(self):
+        return self.imu
+        
     
 
 
@@ -180,6 +206,10 @@ observer = Observer_Converser()
 gains = Controller_Gains()
 reference = Reference_Converser()
 tau = Tau()
+imu1 = IMU(1)
+imu2 = IMU(2)
+imu3 = IMU(3)
+imu4 = IMU(4)
 
 
 # Initialize controller node
@@ -189,6 +219,10 @@ def controllNodeInit():
     rospy.Subscriber("/joy", Joy, ps4.updateState)
     rospy.Subscriber("/CSAD/state_estimate", observer_message, observer.callback)
     # rospy.Subscriber("/CSAD/reference", reference_message, reference.callback)
+    rospy.Subscriber("/imu1", Imu, imu1.callback)
+    rospy.Subscriber("/imu2", Imu, imu2.callback)
+    rospy.Subscriber("/imu3", Imu, imu3.callback)
+    rospy.Subscriber("/imu4", Imu, imu4.callback)
     gain_client = dynamic_reconfigure.client.Client('gain_server', timeout=30, config_callback = gains.callback)
     
 

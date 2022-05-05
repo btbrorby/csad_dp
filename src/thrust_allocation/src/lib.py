@@ -1,4 +1,4 @@
-from math import tau
+#!/usr/bin/env python
 from math_tools import quat2eul, Rzyx
 import rospy
 from std_msgs.msg import Float64MultiArray
@@ -8,14 +8,14 @@ import numpy as np
 
 class UVector():
     def __init__(self):
-        self.Udata = np.zeros(12)
-        self.pub = rospy.Publisher('/CSAD/u', Float64MultiArray, queue_size=1)
+        self.Udata = np.zeros([12,1])
+        self.pub = rospy.Publisher('/CSAD/u', Float64MultiArray, queue_size=10)
         self.u_message = Float64MultiArray()
 
     def getU(self):
         return self.Udata 
     
-    def publish(self, u):
+    def publish(self, u=np.array([12,1])):
         self.u_message.data = u
         self.pub.publish(self.u_message)
         
@@ -23,10 +23,12 @@ class UVector():
 
 class Tau():
     def __init__(self):
-        self.tau = np.zeros(3)
+        self.tau = np.zeros([3,1])
 
-    def updateTau(self, msg):
-        self.tau = msg.data
+    def callback(self, msg=Float64MultiArray()):
+        self.tau[0] = msg.data[0]
+        self.tau[1] = msg.data[1]
+        self.tau[2] = msg.data[2]
     
     def getTau(self):
         return self.tau
@@ -40,7 +42,7 @@ tau  = Tau()
 def thrusterNodeInit():
     global node
     node = rospy.init_node('Allocation_node')
-    rospy.Subscriber("/CSAD/tau", Float64MultiArray, Tau.updateTau)
+    rospy.Subscriber("/CSAD/tau", Float64MultiArray, tau.callback)
     
    
 # Destroy observer node

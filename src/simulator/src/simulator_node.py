@@ -15,38 +15,37 @@ from std_msgs.msg import Float64MultiArray
 path = os.path.dirname(os.getcwd())
 with open(r"{0}/csad_dp_ws/src/simulator/src/params.yaml".format(path)) as file:
     params = yaml.load(file, Loader=yaml.Loader)
+rate = params["runfrequency"]
 
 #Sensors:
-imu1 = IMU(1)
-imu2 = IMU(2)
-imu3 = IMU(3)
-imu4 = IMU(4)
-gnss = GNSS()
+imu1 = IMU(1, dt=1.0/rate)
+imu2 = IMU(2, dt=1.0/rate)
+imu3 = IMU(3, dt=1.0/rate)
+imu4 = IMU(4, dt=1.0/rate)
+gnss = GNSS(dt=1.0/rate)
 
 #Vessel:
-eta0 = np.zeros(6)
-vessel = CSAD(eta0)
-u0 = np.zeros(12)
-thrusters = ThrusterDynamics(u0)
+eta0 = np.zeros([6, 1])
+vessel = CSAD(eta0, dt=1.0/rate)
+u0 = np.zeros([12, 1])
+thrusters = ThrusterDynamics(u0, dt=1.0/rate)
 
 
 #Seastate:
 Hs = 0.4
 Tp = 1.0
-seastate = Wave(Hs, Tp, angle=0, regular = True)
+seastate = Wave(Hs, Tp, angle=0, regular = True, dt=1.0/rate)
 seastate.updateHeading(vessel.eta[5])
 
-def initSimulatorNode():
-    global node
-    node = rospy.init_node("Simulator_node")
-    rospy.Subscriber("/CSAD/u", Float64MultiArray, thrusters.updateU)
+    
 
-def nodeEnd():
-    node.destroy_node()
+
     
 if __name__ == '__main__':
 
-    initSimulatorNode()
+    global node
+    node = rospy.init_node("Simulator_node")
+    rospy.Subscriber("/CSAD/u", Float64MultiArray, thrusters.updateU)
     r = rospy.Rate(params["runfrequency"]) # Usually set to 100 Hz
     
     while not rospy.is_shutdown():
@@ -73,9 +72,12 @@ if __name__ == '__main__':
         imu2.publish()
         imu3.publish()
         imu4.publish()
-        gnss.publish()
+        # gnss.publish()
         # seastate.publish()
         
         r.sleep()
+        # rospy.spin()
     
-    nodeEnd()
+    node.destroy_node()
+    
+    

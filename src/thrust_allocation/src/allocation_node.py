@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 import rospy
 from allocation import loop
 from lib import thrusterNodeInit, nodeEnd
@@ -6,7 +6,7 @@ import os
 import yaml
 
 path = os.path.dirname(os.getcwd())
-with open(r"{0}/csad_dp_ws/src/controller/src/params.yaml".format(path)) as file:
+with open(r"{0}/csad_dp_ws/src/thrust_allocation/src/params.yaml".format(path)) as file:
     params = yaml.load(file, Loader=yaml.Loader)
 
 

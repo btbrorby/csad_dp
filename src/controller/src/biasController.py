@@ -6,6 +6,8 @@ from matplotlib import pyplot as plt
 import yaml
 import os
 
+import rospy
+
 class BiasController:
     def __init__(self, dt):
         self.eta_bias = self.eta_hat = self.nu_hat = np.zeros([3,1])
@@ -71,4 +73,5 @@ def loop():
     tau.publish(controlOutput)
     
     tau.time += dt
+    # rospy.spin()
    

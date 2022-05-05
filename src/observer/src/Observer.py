@@ -3,22 +3,30 @@ import numpy as np
 import math
 from lib import qualisys, tau, observer, gains
 from math_tools import Rzyx, rad2pipi
+import matplotlib.pyplot as plt
 import yaml
 import os
 
-### Write your code here ###
+import rospy
+
 class Observer:
     def __init__(self, dt):
-        self.xsi_hat = self.eta_hat = self.nu_hat = self.bias_hat = np.zeros([3,1])
-        self.eta = self.tau = np.zeros([3,1])
+        self.xsi_hat = np.zeros([3,1])
+        self.eta_hat = np.zeros([3,1])
+        self.nu_hat = np.zeros([3,1])
+        self.bias_hat = np.zeros([3,1])
+        self.eta = np.zeros([3,1])
+        self.tau = np.zeros([3,1])
         
-        self.L_1 = np.ones([3,3])
-        self.L_2 = np.ones([3,3])
-        self.L_3 = np.ones([3,3])
-        self.L_4 = np.ones([3,3])
+        self.L_1 = np.diag([1.0, 1.0, 1.0])
+        self.L_2 = np.diag([1.0, 1.0, 1.0])
+        self.L_3 = np.diag([1.0, 1.0, 1.0])
+        self.L_4 = np.diag([1.0, 1.0, 1.0])
         
-        self.A_w = np.ones([3,3])
-        self.C_w = np.ones([3,3])
+        self.A_w = np.eye(3)
+        self.C_w = np.eye(3)
+        
+        self.time = 0.0
         
     def updateStates(self, eta, tau):
         self.eta = eta
@@ -72,15 +80,18 @@ class Observer:
         self.nu_hat += nu_hat_dot*dt
         self.bias_hat += bias_hat_dot*dt
         
+        self.time += dt
+        
         return self.eta_hat, self.nu_hat, self.bias_hat
 
 
 path = os.path.dirname(os.getcwd())
-with open(r"{0}/csad_dp_ws/src/controller/src/params.yaml".format(path)) as file:
+with open(r"{0}/csad_dp_ws/src/observer/src/params.yaml".format(path)) as file:
     params = yaml.load(file, Loader=yaml.Loader)
 dt = 1.0/params["runfrequency"]
 
 linearObserver = Observer(dt)
+
 def loop():
     """
     All calls to functions and methods should be handled inside here. loop() is called by the main-function in obs_node.py
@@ -97,9 +108,13 @@ def loop():
     controlOutput = tau.getTau()
     linearObserver.updateStates(eta, controlOutput)
     [eta_hat, nu_hat, bias_hat] = linearObserver.observer_linear()
+    observer.publish(eta_hat, nu_hat, bias_hat, linearObserver.time)
     
-    observer.publish(eta_hat, nu_hat, bias_hat)
+    
+    
+    
     # qualisys.publish()
+    # rospy.spin()
     
 
 # o = Observer(0.01)

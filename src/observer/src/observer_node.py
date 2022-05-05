@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 import rospy
-from observer import loop
-# from observer.src.observer import loop
+from Observer import loop
 from lib import observerNodeInit, nodeEnd
 import os 
 import yaml
-#from ctypes.wintypes import MSG
+import matplotlib.pyplot as plt
 
 path = os.path.dirname(os.getcwd())
 with open(r"{0}/csad_dp_ws/src/observer/src/params.yaml".format(path)) as file:
