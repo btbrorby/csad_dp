@@ -9,7 +9,7 @@ import os
 import rospy
 
 class Observer:
-    def __init__(self, dt, peakFrequency=6.28):
+    def __init__(self, dt=0.01, peakFrequency=1.0):
         self.xsi_hat = np.zeros([6,1])
         self.eta_hat = np.zeros([3,1])
         self.nu_hat = np.zeros([3,1])
@@ -17,20 +17,23 @@ class Observer:
         self.eta = np.zeros([3,1])
         self.tau = np.zeros([3,1])
         
+        self.y_tilde = np.zeros([3,1])
+        
         # self.L_1 = 0.0*np.diag([1.0, 1.0, 1.0])
         # self.L_2 = np.diag([5.2, 3.3, 5.7])
         # self.L_3 = 10.0*np.diag([675.0, 675.0, 130.0])
         # self.L_4 = np.diag([1.0, 1.0, 1.0])
         
-        self.Tb = 1000.0*np.sqrt(90.0)*np.diag([1.0,1.0,1.0])
+        self.Tb = (1000.0/90.0)*np.diag([1.0,1.0,1.0])
         
-        omega_c = peakFrequency + 0.1
+        omega_c = peakFrequency + 0.01
         L_11 = -2.0*(1.0-0.1)*(omega_c/peakFrequency)*np.diag([1.0, 1.0, 1.0])
         L_12 = -(peakFrequency**2.0/omega_c)*L_11
         self.L_1 = np.concatenate((L_11, L_12), 0)
-        self.L_2 = omega_c*np.diag([1.0, 1.0, 1.0])
-        self.L_3 = 800.0*np.diag([1.0, 1.0, 0.1])
-        self.L_4 = 0.1*self.L_3
+        self.L_2 = omega_c*np.diag([0.1, 0.1, 0.1])
+        self.L_3 = 800.0*np.diag([0.1, 0.9, 0.08])
+        self.L_4 = 0.01*self.L_3
+        self.L_4[2,2] *= 0.01
         
         dampingRatio = 0.1
         Omega = peakFrequency*np.eye(3)
@@ -84,29 +87,44 @@ class Observer:
         R = Rzyx(self.eta[2])
         R_inv = np.transpose(R)
         
-        y_hat = self.eta_hat + np.matmul(self.C_w, self.xsi_hat)
-        y_tilde = self.eta - y_hat
-        y_tilde[2] = rad2pipi(y_tilde[2])
         
-        # Observer dynamics:
-        xsi_hat_dot = np.matmul(self.A_w, self.xsi_hat) + np.matmul(self.L_1, y_tilde)
+        y_hat = self.eta_hat + np.matmul(self.C_w, self.xsi_hat)
+        self.y_tilde = self.eta - y_hat
+        self.y_tilde[2] = rad2pipi(self.y_tilde[2])
+        
+        xsi_hat_dot = np.matmul(self.A_w, self.xsi_hat) + np.matmul(self.L_1, self.y_tilde)
         xsi_hat_dot = xsi_hat_dot.astype(float)
         
-        eta_hat_dot = np.matmul(R, self.nu_hat) + np.matmul(self.L_2, y_tilde)
+        
+        
+        
+        # Observer dynamics:
+        
+        eta_hat_dot = np.matmul(R, self.nu_hat) + np.matmul(self.L_2, self.y_tilde)
         eta_hat_dot = eta_hat_dot.astype(float)
         
-        nu_hat_dot = np.matmul(M_inv, (-np.matmul(D, self.nu_hat) + np.matmul(R_inv, self.bias_hat) + np.matmul(R_inv, np.matmul(self.L_3, y_tilde)) + self.tau))
+        
+        
+        
+        
+        
+        
+        
+        nu_hat_dot = np.matmul(M_inv, (-np.matmul(D, self.nu_hat) + np.matmul(R_inv, self.bias_hat) + np.matmul(R_inv, np.matmul(self.L_3, self.y_tilde)) + self.tau))
         nu_hat_dot = nu_hat_dot.astype(float)
         
-        bias_hat_dot = np.matmul(self.L_4, y_tilde)
+        bias_hat_dot = np.matmul(self.L_4, self.y_tilde)
         bias_hat_dot = bias_hat_dot.astype(float)
+        
+        
+        
         
         # Euler integration:
         self.xsi_hat += xsi_hat_dot*dt
         self.eta_hat += eta_hat_dot*dt
         self.eta_hat[2] = rad2pipi(self.eta_hat[2])
-        self.nu_hat += nu_hat_dot*dt
         self.bias_hat += bias_hat_dot*dt
+        self.nu_hat += nu_hat_dot*dt
         
         self.time += dt
         
@@ -118,7 +136,7 @@ with open(r"{0}/csad_dp_ws/src/observer/src/params.yaml".format(path)) as file:
     params = yaml.load(file, Loader=yaml.Loader)
 dt = 1.0/params["runfrequency"]
 
-peakFrequency = 2.0*np.pi
+peakFrequency = 1.15*np.pi
 linearObserver = Observer(dt, peakFrequency)
 
 def loop():

@@ -13,9 +13,9 @@ class BiasController:
         self.eta_bias = self.eta_hat = self.nu_hat = np.zeros([3,1])
         self.eta_ref = self.nu_ref = np.zeros([3,1])
         self.dt = dt
-        self.Kp = np.ones([3,3])
-        self.Kd = 0.0*np.ones([3,3])
-        self.Kb = 0.0*np.ones([3,3])
+        self.Kp = np.diag([1.0, 1.0, 1.0])
+        self.Kd = 0.0*np.diag([1.0, 1.0, 1.0])
+        self.Kb = 0.0*np.diag([1.0, 1.0, 1.0])
         
     def updateStates(self, eta_hat, nu_hat, bias_hat, eta_ref, nu_ref):
         self.eta_hat = eta_hat
@@ -41,6 +41,7 @@ class BiasController:
         nu_tilde = self.nu_hat - self.nu_ref
         
         controlOutput = -np.matmul(self.Kp, np.matmul(R_transpose, eta_tilde)) - np.matmul(self.Kd, nu_tilde) - np.matmul(self.Kb, self.bias_hat)
+        
         return controlOutput
         
         
@@ -56,10 +57,12 @@ def loop():
     eta_hat = observer.eta_hat
     nu_hat = observer.nu_hat
     bias_hat = observer.bias_hat
-    
+    eta_hat = np.resize(eta_hat, (3,1))
+    nu_hat = np.resize(nu_hat, (3,1))
+    bias_hat = np.resize(bias_hat, (3,1))
     # eta_ref = reference.eta_d
     # nu_ref = reference.eta_ds #Is this right?
-    eta_ref = 10.0*np.ones([3,1])
+    eta_ref = np.zeros([3,1])
     nu_ref = np.zeros([3,1])
     
     # Kp = gains.Kp

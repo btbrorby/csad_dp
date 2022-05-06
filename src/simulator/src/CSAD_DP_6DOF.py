@@ -80,6 +80,7 @@ class CSAD:
         self.odometry_msg.twist.twist.angular.x = self.nu[3][0]
         self.odometry_msg.twist.twist.angular.y = self.nu[4][0]
         self.odometry_msg.twist.twist.angular.z = self.nu[5][0]
+        self.odometry_msg.header.frame_id = 'simulator'
         # d = rospy.Duration(self.time)
         # print("sec", d.to_sec())
         # print("nsec", d.to_nsec())
@@ -120,6 +121,7 @@ class CSAD:
         self.odometry_msg.twist.twist.angular.x = self.nu[3]
         self.odometry_msg.twist.twist.angular.y = self.nu[4]
         self.odometry_msg.twist.twist.angular.z = self.nu[5]
+        
         
         
     # def getC(self):

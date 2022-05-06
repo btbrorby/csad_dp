@@ -149,19 +149,13 @@ def skewSymmetricMatrix(r):
 
             
 def three2sixDof(x):
-    y = []
-    y.append(x[0])
-    y.append(x[1])
-    y.append(0.0)
-    y.append(0.0)
-    y.append(0.0)
-    y.append(x[2])
+    y = np.zeros([6,1])
+    y[0] = x[0]
+    y[1] = x[1]
+    y[5] = x[2]
     return y
 
 def six2threeDof(x):
-    y = []
-    y.append(x[0])
-    y.append(x[1])
-    y.append(x[5])
+    y = np.array([x[0], x[1], x[5]])
     return y
     

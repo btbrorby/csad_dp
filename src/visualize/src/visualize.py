@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from socket import timeout
 from click import style
 from matplotlib import animation
 from matplotlib.animation import FuncAnimation
@@ -101,6 +102,8 @@ class Visualize():
                        msg.pose.pose.orientation.x,
                        msg.pose.pose.orientation.y,
                        msg.pose.pose.orientation.z)[2]
+        
+        
         
         self.x.append(msg.pose.pose.position.x)
         self.y.append(msg.pose.pose.position.y)
@@ -225,9 +228,9 @@ if __name__ == '__main__':
     observerSub = rospy.Subscriber("/CSAD/state_estimate", observer_message, vis.observerCallback)
     vis.plot_init()
     while not rospy.is_shutdown():
-        vis.updateXYplot()
-        # vis.updateXTplot()
-        # plt.draw()
+        # vis.updateXYplot()
+        a = 1
+        
         
     fig, ax = plt.subplots(4,1)
     ax[0].plot(vis.xFinal, vis.yFinal)
@@ -248,6 +251,7 @@ if __name__ == '__main__':
     ax[2].plot(vis.timeVec_hatFinal, vis.Nuy_hatFinal, color="red")
     ax[3].plot(vis.timeVecFinal, vis.psiFinal)
     ax[3].plot(vis.timeVec_hatFinal, vis.Nur_hatFinal, color="red")
+   
     plt.show()
-    plt.pause(30)
+    plt.pause(40)
     

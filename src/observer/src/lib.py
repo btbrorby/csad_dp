@@ -59,14 +59,14 @@ class Tau():
 class Observer_Converser():
     def __init__(self):
         self.observer_msg = observer_message()
-        self.pub = rospy.Publisher('/CSAD/state_estimate', observer_message, queue_size=10)
+        self.pub = rospy.Publisher('/CSAD/state_estimate', observer_message, queue_size=1)
         self.eta_hat = np.zeros([3,1])
         self.nu_hat = np.zeros([3,1])
         self.bias_hat = np.zeros([3,1])
         
         #For visualization
         self.xyz_msg = Vector3()
-        self.xyzPub = rospy.Publisher('/CSAD/xy_estimate', Vector3, queue_size=10)
+        self.xyzPub = rospy.Publisher('/CSAD/xy_estimate', Vector3, queue_size=1)
         
 
 
