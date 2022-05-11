@@ -90,7 +90,7 @@ class Wave():
         [self.elementAmplitude, self.elementFrequencies, self.elementPhase] = self.generateIrregular()
         [self.xMinus, self.xPluss, self.yMinus, self.yPluss, self.psiMinus, self.psiPluss] = self.separatePlusMinusCoefficients(self.elementFrequencies)
         
-        
+        self.pub_waveLoads = rospy.Publisher('/waveLoads', Float64MultiArray, queue_size=1) #Not used inside control system, only for plotting.
         self.pub_waveMeasurement = rospy.Publisher('/waveElevation', wave_message, queue_size=1)
         
     def separatePlusMinusCoefficients(self, frequencies):
@@ -145,14 +145,20 @@ class Wave():
                 
             
         
-    def publish(self):
+    def publish(self, tauWave=np.zeros([6,1])):
         msg_waveMeasurement = wave_message()
         msg_waveMeasurement.elevation = self.getWaveElevation(self.time)
         msg_waveMeasurement.distance = self.measurementDistance
         msg_waveMeasurement.Tp = self.Tp
         msg_waveMeasurement.Hs = self.Hs
-        
         self.pub_waveMeasurement.publish(msg_waveMeasurement)
+        
+        
+        msg_waveLoads = Float64MultiArray()
+        tauWithTime = np.insert(tauWave, 0, self.time)
+        msg_waveLoads.data = tauWithTime
+        self.pub_waveLoads.publish(msg_waveLoads)
+    
         
     def updateHeading(self, heading):
         """
@@ -343,7 +349,7 @@ class Wave():
         # sumLoads = np.add(driftLoads, slowlyVaryingLoads) 
         # sumLoads = np.add(sumLoads, firstOrderLoads)
         
-        return slowlyVaryingLoads #firstOrderLoads + driftLoads #driftLoads #firstOrderLoads #slowlyVaryingLoads #sumLoads
+        return firstOrderLoads + driftLoads #driftLoads #firstOrderLoads #slowlyVaryingLoads #sumLoads
     
     
         
@@ -458,10 +464,12 @@ class Wave():
             elevation = np.sum(amplitudes*np.cos(frequencies*time - k*x + phases))
         return elevation
         
+    
+        
 
 
-
-# seastate = Wave(0.06, 1.15, stateDescription='very_rough', regular=False)
+# #Uncomment for testing and debugging:
+# seastate = Wave(0.06, 1.15, stateDescription='very_rough', regular=True)
 # seastate.updateHeading(0.0)
 # t = 0.0
 # time = []
@@ -470,14 +478,15 @@ class Wave():
 # tauZ = []
 # elev = []
 # while t < 50:
+    
 #     loads = seastate.getWaveLoads()
-#     seastate.getWaveLoads()
 #     time.append(t)
 #     tauX.append(loads[0])
 #     tauY.append(loads[1])
 #     tauZ.append(loads[5])
 #     elev.append(seastate.getWaveElevation(t))
 #     t += seastate.dt
+    
     
 # m = np.max(tauX)
 # ind = np.where(tauX==m)

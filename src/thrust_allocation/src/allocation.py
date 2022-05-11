@@ -7,14 +7,16 @@ from math_tools import Rzyx, rad2pipi
 import os
 import yaml
 
+path = os.path.dirname(os.getcwd())
+with open(r"{0}/csad_dp_ws/src/thrust_allocation/src/params.yaml".format(path)) as file:
+    params = yaml.load(file, Loader=yaml.Loader)
+
 def ssa(angle):
     angle = ((angle + np.math.pi) % (2*np.math.pi)) - np.math.pi
     return angle
 
 def thrustAllocationExtended(tau_d):
-    path = os.path.dirname(os.getcwd())
-    with open(r"{0}/csad_dp_ws/src/thrust_allocation/src/params.yaml".format(path)) as file:
-        params = yaml.load(file, Loader=yaml.Loader)
+    
         
     lx = params['thruster_coefficients']['lx']
     ly = params['thruster_coefficients']['ly']

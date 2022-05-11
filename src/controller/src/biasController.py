@@ -53,15 +53,8 @@ def loop():
     nu_hat = np.resize(nu_hat, (3,1))
     bias_hat = np.resize(bias_hat, (3,1))
     
-    # Kp = gains.Kp
-    # Kd = gains.Kd
-    # Kb = gains.Kb
-    # if ((not np.array_equal(Kp, controller.Kp)) or (not np.array_equal(Kd, controller.Kd)) or (not np.array_equal(Kb, controller.Kb))):
-    #     controller.updateGains(Kp, Kb, Kd)
-        
     controlOutput = controller.getControlOutput(eta_hat, nu_hat, bias_hat)
     tau.publish(controlOutput)
     
     tau.time += dt
-    # rospy.spin()
    

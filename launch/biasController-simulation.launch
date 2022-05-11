@@ -26,9 +26,4 @@
         name="ThrustAllocation_node"
         output="screen">
     </node>
-    <node pkg="visualize"
-        type="visualize.py"
-        name="visualization_node"
-        output="screen">
-    </node>
 </launch>

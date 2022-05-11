@@ -36,7 +36,7 @@ class CSAD:
         self.nu_dot = np.zeros([6,1])
         self.bias_dot = np.zeros([6,1])
         
-        self.T_b = 100.0*np.eye(6)   # Tuning bias 2~3 times larger than the wave period(?) Make function for this!
+        self.T_b = 1000.0*np.eye(6)   # Tuning bias 2~3 times larger than the wave period(?) Make function for this!
         self.biasMean = 0.0     # Defining white noise
         self.biasStd = 0.01      # Defining white noise
         
@@ -90,20 +90,6 @@ class CSAD:
         
         self.pub_odometry.publish(self.odometry_msg)
     
-     
-    def saveData(self):
-        """
-        Creating vectors for plotting.
-        """
-        self.timeVec.append(self.time)
-        self.xVec.append(self.eta[0])
-        self.yVec.append(self.eta[1])
-        self.zVec.append(self.eta[2])
-        self.phiVec.append(self.eta[3])
-        self.thetaVec.append(self.eta[4])
-        self.psiVec.append(self.eta[5])
-        self.thrustLoadVec.append(self.thrustDynamics.loads)
-        
     
     def nav_msg(self):
         quaternion = math_tools.euler2quat(self.eta[3], self.eta[4], self.eta[5])
@@ -167,7 +153,6 @@ class CSAD:
         self.nu = self.nu.astype(float)
         self.bias = self.bias.astype(float)
 
-        self.saveData()
         self.time += self.dt
         
 

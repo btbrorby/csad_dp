@@ -8,9 +8,7 @@ from CSAD_DP_6DOF import CSAD
 from waveLoads import Wave
 from ThrusterDynamics import ThrusterDynamics
 from std_msgs.msg import Float64MultiArray
-# from nav_msgs.msg import Odometry
-
-# from sensor_msgs.msg import Imu
+import time as tic
 
 path = os.path.dirname(os.getcwd())
 with open(r"{0}/csad_dp_ws/src/simulator/src/params.yaml".format(path)) as file:
@@ -34,7 +32,7 @@ thrusters = ThrusterDynamics(u0, dt=1.0/rate)
 #Seastate:
 Hs = 0.06
 Tp = 1.15
-seastate = Wave(Hs, Tp, stateDescription='rough', angle=4.0*np.pi*4.0/180.0, regular = True, dt=1.0/rate)
+seastate = Wave(Hs, Tp, stateDescription='rough', angle=90.0*np.pi/180.0, regular = True, dt=1.0/rate)
 seastate.updateHeading(vessel.eta[5])
     
 if __name__ == '__main__':
@@ -43,7 +41,7 @@ if __name__ == '__main__':
     node = rospy.init_node("Simulator_node")
     rospy.Subscriber("/CSAD/u", Float64MultiArray, thrusters.updateU)
     r = rospy.Rate(params["runfrequency"]) # Usually set to 100 Hz
-    
+    t0 = tic.time()
     while not rospy.is_shutdown():
         
         tau_wave = seastate.getWaveLoads()
@@ -59,20 +57,18 @@ if __name__ == '__main__':
         imu4.setOdometry(vessel.eta, vessel.nu, vessel.eta_dot, vessel.nu_dot)
         gnss.setOdometry(vessel.eta, vessel.nu, vessel.eta_dot, vessel.nu_dot)
         
-        measurement_wave = seastate.getWaveElevation(30) #needs to be made for use in control system
-        
-        
-        
         vessel.publish()
         imu1.publish()
         imu2.publish()
         imu3.publish()
         imu4.publish()
         # gnss.publish()
-        seastate.publish()
-        
+        seastate.publish(tauWave=tau_wave)
+
         r.sleep()
         # rospy.spin()
+        print("TIMESTEP", tic.time()-t0)
+
     
     node.destroy_node()
     

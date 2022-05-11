@@ -9,7 +9,7 @@ import numpy as np
 class UVector():
     def __init__(self):
         self.Udata = np.zeros([12,1])
-        self.pub = rospy.Publisher('/CSAD/u', Float64MultiArray, queue_size=10)
+        self.pub = rospy.Publisher('/CSAD/u', Float64MultiArray, queue_size=1)
         self.u_message = Float64MultiArray()
 
     def getU(self):

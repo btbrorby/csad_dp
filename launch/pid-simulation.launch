@@ -16,8 +16,8 @@
         name="Observer_node">
     </node>
     <node pkg="controller"
-        type="controller_node.py"
-        name="Controller_node">
+        type="pidController_node.py"
+        name="pidController_node">
     </node>
     <node pkg="thrust_allocation"
         type="allocation_node.py"

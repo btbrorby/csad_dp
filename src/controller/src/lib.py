@@ -62,7 +62,7 @@ class UVector():
 class Observer_Converser():
     def __init__(self):
         self.observer_msg = observer_message()
-        self.sub = rospy.Subscriber('/CSAD/state_estimate', observer_message, queue_size=10)
+        self.sub = rospy.Subscriber('/CSAD/state_estimate', observer_message, queue_size=1)
         self.eta_hat = np.zeros([3,1])
         self.nu_hat = np.zeros([3,1])
         self.bias_hat = np.zeros([3,1])
@@ -141,7 +141,7 @@ class Controller_Gains():
 class Tau():
     def __init__(self):
         self.tau_msg = Float64MultiArray()
-        self.pub = rospy.Publisher("/CSAD/tau", Float64MultiArray, queue_size=10)
+        self.pub = rospy.Publisher("/CSAD/tau", Float64MultiArray, queue_size=1)
         self.tau = np.zeros([3,1])
         self.mode = False
         self.time = 0.0

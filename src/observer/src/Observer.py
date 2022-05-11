@@ -30,8 +30,8 @@ class Observer:
         L_11 = -2.0*(1.0-0.1)*(omega_c/peakFrequency)*np.diag([1.0, 1.0, 1.0])
         L_12 = -(peakFrequency**2.0/omega_c)*L_11
         self.L_1 = np.concatenate((L_11, L_12), 0)
-        self.L_2 = omega_c*np.diag([0.1, 0.1, 0.1])
-        self.L_3 = 800.0*np.diag([0.1, 0.9, 0.08])
+        self.L_2 = omega_c*np.diag([0.01, 0.1, 0.1])
+        self.L_3 = 800.0*np.diag([0.6, 0.9, 0.18])
         self.L_4 = 0.01*self.L_3
         self.L_4[2,2] *= 0.01
         

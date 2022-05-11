@@ -79,7 +79,11 @@ class Observer_Converser():
         self.observer_msg.eta = eta_hat
         self.observer_msg.nu = nu_hat
         self.observer_msg.bias = bias_hat
+        t = rospy.Time.now()
+        self.observer_msg.secs = t.secs
+        self.observer_msg.nsecs = t.nsecs
         self.pub.publish(self.observer_msg)
+        
         
         self.xyz_msg.x = eta_hat[0]
         self.xyz_msg.y = eta_hat[1]

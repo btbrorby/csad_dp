@@ -9,6 +9,7 @@ from sensor_msgs.msg import Imu
 from nav_msgs.msg import Odometry
 import yaml
 import os
+import time as tic
 
 path = os.path.dirname(os.getcwd())
 with open(r"{0}/csad_dp_ws/src/simulator/src/sensorParams.yaml".format(path)) as file:
@@ -76,10 +77,9 @@ class GNSS():
     def getGnssMeasured(self):
         """Simulates the odometry signal by adding uncertanties, dropouts etc. Unfinnished"""
         self.time += self.dt
-        output = np.append(self.eta, self.nu)
+        output = np.concatenate(self.eta, self.nu)
         return output
             
-        
         
 
 class IMU():
@@ -127,6 +127,7 @@ class IMU():
         
     
     def publish(self):
+        
         measurementAcc = self.getAccMeasured()
         self.msg_imu.linear_acceleration.x = measurementAcc[0]
         self.msg_imu.linear_acceleration.y = measurementAcc[1]
@@ -163,9 +164,6 @@ class IMU():
     
         
     def getImuLocation(self):
-        path = os.path.dirname(os.getcwd())
-        with open(r"{0}/csad_dp_ws/src/simulator/src/sensorParams.yaml".format(path)) as file:
-            params = yaml.load(file, Loader=yaml.Loader)
         
         imuName = 'imu'+str(self.id)
         locations = params['imu_locations'][imuName]
@@ -240,36 +238,3 @@ class IMU():
     def getGyroMeasured(self):
         
         return [0.0, 0.0, 0.0]
-
-
-"""For testing"""
-# dt = 0.01
-# gnss = GNSS(dt)
-# imu = IMU(4)
-
-
-# i = 0
-# fig = plt.figure()
-# while i < 1000:
-#     imu.biasVec = np.append(imu.biasVec, imu.getAccMeasured(0.01))
-#     if np.size(imu.biasVec) > 100:
-#         imu.biasVec = np.delete(imu.biasVec, 0)
-#         plt.clf()
-#     i += 1
-#     print(imu.biasVec)
-#     imu.plotIMU()
-
-# # plt.show()
-
-# print('/imu' + str(4))
-
-
-
-
-
-
-# def sensorNodeInit():
-#     global node
-#     node = rospy.init_node("Sensor_node")
-#     rospy.Subscriber('/CSAD/simulator', Odometry, imu.updateOdometry)
-#     rospy.Subscriber('/CSAD/simulator', Odometry, gnss.updateGnss)
