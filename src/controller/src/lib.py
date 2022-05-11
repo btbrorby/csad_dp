@@ -143,27 +143,16 @@ class Tau():
         self.tau_msg = Float64MultiArray()
         self.pub = rospy.Publisher("/CSAD/tau", Float64MultiArray, queue_size=10)
         self.tau = np.zeros([3,1])
-        self.z = np.zeros([3,1])
         self.mode = False
         self.time = 0.0
 
     def callback(self, msg=Float64MultiArray()):
         self.tau = msg.data
         # self.tau_msg.data.index()
-        
-    def updateIntegralAction(self, z):
-        self.z = z
-        
-    def getIntegralAction(self):
-        return self.z
     
     def publish(self, tau):
         self.tau = tau
         self.tau_msg.data = tau
-        # print(tau)
-        # self.tau_msg.data[0] = tau[0]
-        # self.tau_msg.data[1] = tau[1]
-        # self.tau_msg.data[2] = tau[2]
         self.pub.publish(self.tau_msg)
         
     

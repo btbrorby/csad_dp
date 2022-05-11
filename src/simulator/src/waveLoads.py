@@ -343,7 +343,7 @@ class Wave():
         # sumLoads = np.add(driftLoads, slowlyVaryingLoads) 
         # sumLoads = np.add(sumLoads, firstOrderLoads)
         
-        return firstOrderLoads + driftLoads #driftLoads #firstOrderLoads #slowlyVaryingLoads #sumLoads
+        return slowlyVaryingLoads #firstOrderLoads + driftLoads #driftLoads #firstOrderLoads #slowlyVaryingLoads #sumLoads
     
     
         

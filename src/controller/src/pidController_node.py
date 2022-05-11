@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import rospy
-from controller import loop
+from pidController import loop
 from lib import controllNodeInit, nodeEnd
 import yaml
 import os

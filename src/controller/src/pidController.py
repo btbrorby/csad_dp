@@ -6,11 +6,10 @@ from lib import odometry, observer, reference, ps4, u_data, gains, tau
 from math_tools import Rzyx, rad2pipi
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Float64MultiArray
+import yaml
+import os
 
 
-
-
-### Write your code here ###
 
 
 def saturate(u):
@@ -49,76 +48,63 @@ def sixaxis2thruster(lStickX, lStickY, rStickX, rStickY, xbutton):
     return u
 
 
+class PID:
+    def __init__(self, dt=0.01, eta_d=np.zeros([3,1]), eta_d_dot=np.zeros([3,1]), eta_d_dotdot=np.zeros([3,1])):
+        self.eta_d = eta_d
+        self.eta_d_dot = eta_d_dot
+        self.eta_d_dotdot = eta_d_dotdot
+        self.z = 0.0
+        self.Kp = np.diag([0.0, 0.0, 0.0])
+        self.Ki = np.diag([0.0, 0.0, 0.0])
+        self.Kd = np.diag([0.0, 0.0, 0.0])
+        
+        
+    def getControllerOutput(self, eta_hat, nu_hat):
+        """
+        PID controller
+        """
+        R = Rzyx(eta_hat[2])
+        R_inv = np.transpose(R)
+        dt = 0.01 #Should be depending on yaml file!!!
+        
+        eta_hat_dot = np.matmul(R, nu_hat)
+        eta_hat_dot = np.resize(eta_hat_dot, (3,1))
+        
+        z_dot = eta_hat - self.eta_d
+        self.z += z_dot*dt
+        self.z[2] = rad2pipi(self.z[2])
+        
+        nu_d = np.matmul(R_inv, self.eta_d_dot)
+                
+        eta_tilde = eta_hat - self.eta_d
+        nu_tilde = nu_hat - nu_d
+        
+        controlOutput = - np.matmul(self.Kp, np.matmul(R_inv, eta_tilde)) - np.matmul(self.Kd, nu_tilde) - np.matmul(self.Ki, np.matmul(R_inv, self.z))
+        controlOutput = np.resize(controlOutput, (3,1))
+        return controlOutput
 
-def pid(eta_hat, nu_hat, bias_hat, z, eta_ref, nu_ref, Kp, Ki, Kd):
-    """
-    PID controller
-    """
-    
-    #Check if circle has been pressed, then turn on/off integral action
-    
-    # Kp = np.diag([0.0, 0.0, 0.0])
-    # Ki = np.diag([0.0, 0.0, 0.0])
-    # Kd = np.diag([0.0, 0.0, 0.0])
-    
-    #eta_hat[2] = rad2pipi(eta_hat[2]) #Is this right?
-    R = Rzyx(eta_hat[2])
-    R_inv = np.transpose(R)
-    dt = 0.01 #Should be depending on yaml file!!!
-    
-    eta_hat_dot = R @ nu_hat
-    z = z + dt*eta_hat_dot
-    
-    eta_tilde = eta_hat - eta_ref
-    nu_tilde = nu_hat - nu_ref
-    
-    tau_d = Kp @ R_inv @ eta_tilde + Kd @ nu_tilde + Ki @ R_inv @ z
-    
-    tau_d = 1
-    
-    return tau_d, z
 
+path = os.path.dirname(os.getcwd())
+with open(r"{0}/csad_dp_ws/src/controller/src/params.yaml".format(path)) as file:
+    params = yaml.load(file, Loader=yaml.Loader)
 
-def biasDP(eta_hat, nu_hat, bias_hat, eta_ref, nu_ref, Kp, Kb, Kd):
-    """
-    Bias estimate controller
-    """
-    eta_hat[2] = rad2pipi(eta_hat[2]) #Is this right?
-    R = Rzyx(eta_hat[2])
-    R_inv = np.transpose(R)
-    dt = 0.01 #Should be depending on yaml file!!!
-    
-    eta_tilde = eta_hat - eta_ref
-    nu_tilde = nu_hat - nu_ref
-    
-    tau_d = R_inv @ Kp @ eta_tilde + Kd @ nu_tilde + Kb @ bias_hat
-    
-    return tau_d
+dt = 1.0/params["runfrequency"]
 
-### End of custom code
+controller = PID(dt)
     
 def loop():
 
     eta_hat = observer.eta_hat
     nu_hat = observer.nu_hat
     bias_hat = observer.bias_hat
+    eta_hat = np.resize(eta_hat, (3,1))
+    nu_hat = np.resize(nu_hat, (3,1))
+    bias_hat = np.resize(bias_hat, (3,1))
     
-    eta_ref = reference.eta_d
-    nu_ref = reference.eta_ds #Is this right?
-    eta_ref = np.zeros(3)
-    nu_ref = np.zeros(3)
+    controllerOutput = controller.getControllerOutput(eta_hat, nu_hat)
     
-    Kp = gains.Kp
-    Ki = gains.Ki
-    Kd = gains.Kd
-    
-    z = tau.getIntegralAction()
-    
-    mode = tau.mode
-    
-    tau_d, z = pid(eta_hat, nu_hat, bias_hat, z, eta_ref, nu_ref, Kp, Ki, Kd)
-    tau.updateIntegralAction(z)
-    tau.publish(tau_d)
+    tau.publish(controllerOutput)
+    tau.time += dt
     
     # if CIRCLE is pressed, mode shift between manual control and dp control
     # if X is pressed, thrusters is set to zero
