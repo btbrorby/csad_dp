@@ -32,7 +32,7 @@ thrusters = ThrusterDynamics(u0, dt=1.0/rate)
 #Seastate:
 Hs = 0.06
 Tp = 1.15
-seastate = Wave(Hs, Tp, stateDescription='rough', angle=90.0*np.pi/180.0, regular = True, dt=1.0/rate)
+seastate = Wave(Hs, Tp, stateDescription='rough', angle=0.0*np.pi/180.0, regular = False, dt=1.0/rate)
 seastate.updateHeading(vessel.eta[5])
     
 if __name__ == '__main__':
@@ -43,9 +43,9 @@ if __name__ == '__main__':
     r = rospy.Rate(params["runfrequency"]) # Usually set to 100 Hz
     t0 = tic.time()
     while not rospy.is_shutdown():
-        
+        t1 = tic.time()
         tau_wave = seastate.getWaveLoads()
-        tau_thr = thrusters.getThrustLoads() #needs to be finnished
+        tau_thr = thrusters.getThrustLoads()
         waveFrequency = seastate.frequency
         
         vessel.updateStates(tau_wave, tau_thr, waveFrequency)
@@ -58,16 +58,17 @@ if __name__ == '__main__':
         gnss.setOdometry(vessel.eta, vessel.nu, vessel.eta_dot, vessel.nu_dot)
         
         vessel.publish()
+        seastate.publish(tauWave=tau_wave)
         imu1.publish()
         imu2.publish()
         imu3.publish()
         imu4.publish()
         # gnss.publish()
-        seastate.publish(tauWave=tau_wave)
-
+        
         r.sleep()
         # rospy.spin()
-        print("TIMESTEP", tic.time()-t0)
+        print("Simulation time:", tic.time()-t0)
+        print("Time step:", tic.time()-t1)
 
     
     node.destroy_node()

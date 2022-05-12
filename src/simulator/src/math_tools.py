@@ -124,18 +124,33 @@ def transformationMatrix(eta):
         phi = eta[3]
         theta = eta[4]
         psi = eta[5]
-        J1 = np.array([[math.cos(psi)*math.cos(theta), -math.sin(phi)+math.cos(theta)+math.cos(phi)*math.sin(theta)*math.sin(phi), math.sin(psi)*math.sin(phi)+math.cos(psi)*math.cos(phi)*math.sin(theta)],
-                       [math.sin(psi)*math.cos(theta), math.cos(psi)*math.cos(phi)+math.sin(phi)*math.sin(theta)*math.sin(psi), -math.cos(psi)*math.sin(phi)+math.sin(theta)*math.sin(psi)*math.cos(phi)],
-                       [-math.sin(theta), math.cos(theta)*math.sin(phi), math.cos(theta)*math.cos(phi)]])
+        
+        cphi = math.cos(phi)
+        sphi = math.sin(phi)
+        cth  = math.cos(theta)
+        sth  = math.sin(theta)
+        cpsi = math.cos(psi)
+        spsi = math.sin(psi)
+        
+        J1 = np.array([[1.0, sphi*sth/cth, cphi*sth/cth],
+                       [0.0, cphi, -sphi],
+                       [0.0, sphi/cth, cphi/cth]])
+        J2 = np.array([[cpsi*cth, -spsi*cphi+cpsi*sth*sphi, spsi*sphi+cpsi*cphi*sth],
+                       [spsi*cth, cpsi*cphi+sphi*sth*spsi, -cpsi*sphi+sth*spsi*cphi],
+                       [-sth, cth*sphi, cth*cphi]])
+        
+        # J1 = np.array([[math.cos(psi)*math.cos(theta), -math.sin(phi)+math.cos(theta)+math.cos(phi)*math.sin(theta)*math.sin(phi), math.sin(psi)*math.sin(phi)+math.cos(psi)*math.cos(phi)*math.sin(theta)],
+        #                [math.sin(psi)*math.cos(theta), math.cos(psi)*math.cos(phi)+math.sin(phi)*math.sin(theta)*math.sin(psi), -math.cos(psi)*math.sin(phi)+math.sin(theta)*math.sin(psi)*math.cos(phi)],
+        #                [-math.sin(theta), math.cos(theta)*math.sin(phi), math.cos(theta)*math.cos(phi)]])
         
         
-        J2 = np.array([[1, math.sin(phi)*math.tan(theta), math.cos(phi)*math.tan(theta)],
-                       [0, math.cos(phi), -math.sin(phi)],
-                       [0, math.sin(phi)/math.cos(theta), math.cos(phi)/math.cos(theta)]])
+        # J2 = np.array([[1, math.sin(phi)*math.tan(theta), math.cos(phi)*math.tan(theta)],
+        #                [0, math.cos(phi), -math.sin(phi)],
+        #                [0, math.sin(phi)/math.cos(theta), math.cos(phi)/math.cos(theta)]])
         zero = np.zeros([3, 3])
-        
-        J = np.hstack((np.vstack((J1, zero)), np.vstack((zero, J2))))
-        
+        Jcol1 = np.concatenate((J1, zero), axis=0)
+        Jcol2 = np.concatenate((zero, J2), axis=0)
+        J = np.concatenate((Jcol1, Jcol2), axis=1)
         return J
 
 def skewSymmetricMatrix(r):

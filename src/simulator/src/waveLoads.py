@@ -33,7 +33,7 @@ with open(r"{0}/csad_dp_ws/src/simulator/include/seastateDefinitions.yaml".forma
     states = yaml.load(file, Loader=yaml.Loader)
 
 class Wave():
-    def __init__(self, Hs, Tp, stateDescription='calm', waterDepth=np.infty, angle=0.0, deltaFrequency=0.1, regular=True, dt=timeStep):
+    def __init__(self, Hs, Tp, stateDescription='calm', waterDepth=np.infty, angle=0.0, N = 25, regular=True, dt=timeStep):
         """
         StateDescription defines realistic sea states where the valid area for Hs and Tp is defined.
         Can choose between 'calm', 'smooth', 'slight', 'moderate', 'rough', 'very_rough', 'high', 'very_high' or 'phenomenal'.
@@ -45,30 +45,36 @@ class Wave():
         Tp_min = states['seastates'][stateDescription]['Tp_min']
         Tp_max = states['seastates'][stateDescription]['Tp_max']
         
-        if stateDescription == 'calm':
-            self.Hs = Hs_max
-            self.Tp = Tp_max
-        if Hs_min > Hs: self.Hs = Hs_min
-        elif Hs_max < Hs: self.Hs = Hs_max    
-        else: self.Hs = Hs
-        if Tp_min > Tp: self.Tp = Tp_min
-        elif Tp_max < Tp: self.Tp = Tp_max
-        else: self.Tp = Tp
-        self.dt = dt
-        
         self.Hs = Hs
         self.Tp = Tp
-        self.amplitude = Hs/2.0
+        # if stateDescription == 'calm':
+        #     self.Hs = Hs_max
+        #     self.Tp = Tp_max
+        # if Hs_min > Hs:
+        #     self.Hs = Hs_min
+        # elif Hs_max < Hs:
+        #     self.Hs = Hs_max   
+        # else: 
+        #     self.Hs = Hs
+        # if Tp_min > Tp:
+        #     self.Tp = Tp_min
+        # elif Tp_max < Tp:
+        #     self.Tp = Tp_max
+        # else:
+        #     self.Tp = Tp
+        
+        self.dt = dt
+        
+        self.amplitude = self.Hs/2.0
         self.angleWaveNED = angle
         self.angleWaveBody= self.angleWaveNED
-        self.frequency = 2.0*math.pi/Tp
+        self.frequency = 2.0*np.pi/self.Tp
         self.waterDepth = waterDepth
         #Parameters for irregular states
         self.alpha = 0.0081
         self.gamma = 3.3
         self.sigma_a = 0.07
         self.sigma_b = 0.09
-        self.dw = deltaFrequency
         # self.dT = 0.2 #unused
         
         self.w1 = 2.0*pi*1.3/self.Tp
@@ -76,8 +82,13 @@ class Wave():
         self.b = 0.44*(self.w1**4.0)
         self.m0 = self.a/(4.0*self.b)
         self.Hm0 = 4.0*math_tools.sqrt(self.m0)
+        
+        self.N = N
+        spectrum_min = 0.5*np.pi/self.Tp
+        spectrum_max = 4.0*np.pi/self.Tp
+        self.dw = (spectrum_max - spectrum_min)/self.N
         # self.spectrumFrequencies = np.arange(3.6*math_tools.sqrt(self.Hm0), 5.0*math_tools.sqrt(self.Hm0), self.dw)
-        self.spectrumFrequencies = np.arange(2.0*np.pi/Tp_max, 2.0*np.pi/Tp_min, self.dw)
+        self.spectrumFrequencies = np.arange(spectrum_min, spectrum_max, self.dw)
         # self.spectrumFrequencies = np.arange(data.frequencies[0], self.frequency, self.dw) #Set upper and lower values!
         
         #Initial guess for wave number:
@@ -88,7 +99,7 @@ class Wave():
         self.time = 0.0
         
         [self.elementAmplitude, self.elementFrequencies, self.elementPhase] = self.generateIrregular()
-        [self.xMinus, self.xPluss, self.yMinus, self.yPluss, self.psiMinus, self.psiPluss] = self.separatePlusMinusCoefficients(self.elementFrequencies)
+        # [self.xMinus, self.xPluss, self.yMinus, self.yPluss, self.psiMinus, self.psiPluss] = self.separatePlusMinusCoefficients(self.elementFrequencies)
         
         self.pub_waveLoads = rospy.Publisher('/waveLoads', Float64MultiArray, queue_size=1) #Not used inside control system, only for plotting.
         self.pub_waveMeasurement = rospy.Publisher('/waveElevation', wave_message, queue_size=1)
@@ -246,7 +257,7 @@ class Wave():
         driftLoads = math_tools.three2sixDof(driftLoads)
         return driftLoads
     
-    def getSlowlyVaryingLoads(self, waveFreq, angleWaveBody, waveAmplitude, phaseLag=np.array([0.0])):
+    def getSlowlyVaryingLoads(self, waveFreq, angleWaveBody, waveAmplitude, wavePhase=np.array([0.0])):
         """
         Provides slowly varying loads based on Newman's approximation.
         
@@ -260,52 +271,34 @@ class Wave():
             array: 6DOF array of slowly varying loads
         """
         headingIndex = np.argmin(np.abs(data.headingsData - angleWaveBody))
-        # if self.regular == False:
-        #     xElement = 0.0
-        #     yElement = 0.0
-        #     psiElement = 0.0
-        #     
-        #     if self.xPluss.any():
-        #         i = self.xPluss[:,0].astype(int)
-        #         xElement = np.power(np.sum(waveAmplitude[i]*np.sqrt(2.0*self.xPluss[:,1])*np.cos(waveFreq[i]*self.time + phaseLag[i])), 2.0)
-        #     if self.xMinus.any():
-        #         i = self.xMinus[:,0].astype(int)
-        #         xElement -= np.power(np.sum(waveAmplitude[i]*np.sqrt(-2.0*self.xMinus[:,1])*np.cos(waveFreq[i]*self.time + phaseLag[i])), 2.0)
-        #     if self.yPluss.any():
-        #         i = self.yPluss[:,0].astype(int)
-        #         yElement = np.power(np.sum(waveAmplitude[i]*np.sqrt(2.0*self.yPluss[:,1])*np.cos(waveFreq[i]*self.time + phaseLag[i])), 2.0)
-        #     if self.yMinus.any():
-        #         i = self.yMinus[:,0].astype(int)
-        #         yElement -= np.power(np.sum(waveAmplitude[i]*np.sqrt(-2.0*self.yMinus[:,1])*np.cos(waveFreq[i]*self.time + phaseLag[i])), 2.0)
-        #     if self.psiPluss.any():
-        #         i = self.psiPluss[:,0].astype(int)
-        #         psiElement = np.power(np.sum(waveAmplitude[i]*np.sqrt(2.0*self.psiPluss[:,1])*np.cos(waveFreq[i]*self.time + phaseLag[i])), 2.0)
-        #     if self.psiMinus.any():
-        #         i = self.psiMinus[:,0].astype(int)
-        #         psiElement -= np.power(np.sum(waveAmplitude[i]*np.sqrt(-2.0*self.psiMinus[:,1])*np.cos(waveFreq[i]*self.time + phaseLag[i])), 2.0)
-        #     slowlyVaryingLoads = np.array([xElement, yElement, psiElement])
-            
             
         xElement = 0.0
         yElement = 0.0
         psiElement = 0.0
-        count = 0    
+        count = 0   
+        print(len(self.spectrumFrequencies))
+        realValue = np.zeros([3,1])
         if self.regular == False:
-            for w in waveFreq:
-                frequencyIndex = np.argmin(np.abs(data.driftForceFreq - w))
-                
-                driftCoefficient = np.array([data.driftForceAmpX[frequencyIndex, headingIndex],
-                                                data.driftForceAmpY[frequencyIndex, headingIndex],
-                                                data.driftForceAmpPsi[frequencyIndex, headingIndex]])
-                xElement += waveAmplitude[count]*np.power(np.abs(driftCoefficient[0]), 0.5)*np.cos(w*self.time + phaseLag[count])
-                yElement += waveAmplitude[count]*np.power(np.abs(driftCoefficient[1]), 0.5)*np.cos(w*self.time + phaseLag[count])
-                psiElement += waveAmplitude[count]*np.power(np.abs(driftCoefficient[2]), 0.5)*np.cos(w*self.time + phaseLag[count])
-                count += 1    
+            for k in range(int(0.2*self.N), int(0.6*self.N), 1):
+                frequencyIndex_k = np.argmin(np.abs(data.driftForceFreq - waveFreq[k]))
+                Q_k = np.array([data.driftForceAmpX[frequencyIndex_k, headingIndex], 
+                                    data.driftForceAmpY[frequencyIndex_k, headingIndex],
+                                    data.driftForceAmpPsi[frequencyIndex_k, headingIndex]])
+                for i in range(k):
+                    frequencyIndex_i = np.argmin(np.abs(data.driftForceFreq - waveFreq[i]))
+                    Q_i = np.array([data.driftForceAmpX[frequencyIndex_i, headingIndex], 
+                                    data.driftForceAmpY[frequencyIndex_i, headingIndex],
+                                    data.driftForceAmpPsi[frequencyIndex_i, headingIndex]])
+                    Q_ki = 0.5*(np.abs(Q_k) + np.abs(Q_i))
+                    element = Q_ki*waveAmplitude[k]*waveAmplitude[i]*np.exp(1j*(waveFreq[k]-waveFreq[i])*self.time - (wavePhase[k]-wavePhase[i]))
+                    element = np.resize(element, (3,1))
+                    
+                    realValue += np.real(element)
+                    
+            slowlyVaryingLoads = 2.0*realValue
+           
             
-            slowlyVaryingLoads = np.array([2.0*np.power(xElement, 2.0), 2.0*np.power(yElement, 2.0), 2.0*np.power(psiElement, 2.0)])
-                
-            
-        else:
+        else: #not in use?
             frequencyIndex = np.argmin(np.abs(data.driftForceFreq - waveFreq))
             
             driftCoefficient = np.array([data.driftForceAmpX[frequencyIndex, headingIndex],
@@ -313,9 +306,9 @@ class Wave():
                                          data.driftForceAmpPsi[frequencyIndex, headingIndex]])
             
             
-            xElement = waveAmplitude*(np.power(np.abs(driftCoefficient[0]), 0.5))*np.cos(waveFreq*self.time + phaseLag[0])
-            yElement = waveAmplitude*(np.power(np.abs(driftCoefficient[1]), 0.5))*np.cos(waveFreq*self.time + phaseLag[0])
-            psiElement = waveAmplitude*(np.power(np.abs(driftCoefficient[2]), 0.5))*np.cos(waveFreq*self.time + phaseLag[0])
+            xElement = waveAmplitude*(np.power(np.abs(driftCoefficient[0]), 0.5))*np.cos(waveFreq*self.time + wavePhase[0])
+            yElement = waveAmplitude*(np.power(np.abs(driftCoefficient[1]), 0.5))*np.cos(waveFreq*self.time + wavePhase[0])
+            psiElement = waveAmplitude*(np.power(np.abs(driftCoefficient[2]), 0.5))*np.cos(waveFreq*self.time + wavePhase[0])
             slowlyVaryingLoads = np.array([2.0*np.power(xElement, 2.0), 2.0*np.power(yElement, 2.0), 2.0*np.power(psiElement, 2.0)])
             
         slowlyVaryingLoads = math_tools.three2sixDof(slowlyVaryingLoads)
@@ -329,7 +322,6 @@ class Wave():
         Returns:   
             array: sum of driftLoads, froudeKryolv and slowly varying wave loads
         """
-        
         #This function must rely on wheter there is a regular or irregular state!
         #Regular waves:
 
@@ -337,19 +329,19 @@ class Wave():
             # [elementAmplitude, elementFrequencies, elementPhase] = self.generateIrregular()
             firstOrderLoads = self.getFirstOrderLoad(self.elementFrequencies, self.angleWaveBody, self.elementAmplitude, self.elementPhase)    #Does it reflect first order loads?
             driftLoads = self.getDriftLoads(self.elementFrequencies, self.angleWaveBody, self.elementAmplitude)   #Gives too high values...
-            slowlyVaryingLoads = self.getSlowlyVaryingLoads(self.elementFrequencies, self.angleWaveBody, self.elementAmplitude, phaseLag=self.elementPhase) #To high values and not slowly varying...
+            slowlyVaryingLoads = self.getSlowlyVaryingLoads(self.elementFrequencies, self.angleWaveBody, self.elementAmplitude, wavePhase=self.elementPhase) #To high values and not slowly varying...
             
         else:   #If the regular==True:
             firstOrderLoads = self.getFirstOrderLoad(self.frequency, self.angleWaveBody, self.amplitude)
             driftLoads = self.getDriftLoads(self.frequency, self.angleWaveBody, self.amplitude)
-            slowlyVaryingLoads = self.getSlowlyVaryingLoads(self.frequency, self.angleWaveBody, self.amplitude)
+            slowlyVaryingLoads = np.zeros([6,1])
         
         self.time += self.dt
         
         # sumLoads = np.add(driftLoads, slowlyVaryingLoads) 
         # sumLoads = np.add(sumLoads, firstOrderLoads)
         
-        return firstOrderLoads + driftLoads #driftLoads #firstOrderLoads #slowlyVaryingLoads #sumLoads
+        return driftLoads + slowlyVaryingLoads + firstOrderLoads #driftLoads #firstOrderLoads #slowlyVaryingLoads #sumLoads
     
     
         
@@ -434,14 +426,18 @@ class Wave():
             spectrums[count] = spectrum
             elementAmplitude[count] = math_tools.sqrt(2.0*spectrum*self.dw) #contains all wave amplitudes
             elementPhase[count] = 2.0*pi*np.random.rand()
-            count +=1
+            count += 1
         
+        fig = plt.figure()
+        
+        
+        # plt.plot(elementFrequencies, spectrums)
+        # plt.plot(elementFrequencies[int(0.2*self.N):int(0.6*self.N)], spectrums[int(0.2*self.N):int(0.6*self.N)])
+        # plt.show()
         # elementAmplitude = np.array(elementAmplitude).astype(float)
         # elementFrequencies = np.array(elementFrequencies).astype(float)
         # elementPhase = np.array(elementPhase).astype(float)
         # elementFrequencies = elementFrequencies.astype(float)
-        fig = plt.figure()
-        plt.plot(elementFrequencies/(2.0*np.pi), spectrums)
             
         return elementAmplitude, elementFrequencies, elementPhase
         

@@ -92,32 +92,18 @@ class Observer:
         self.y_tilde = self.eta - y_hat
         self.y_tilde[2] = rad2pipi(self.y_tilde[2])
         
+        # Observer dynamics:
         xsi_hat_dot = np.matmul(self.A_w, self.xsi_hat) + np.matmul(self.L_1, self.y_tilde)
         xsi_hat_dot = xsi_hat_dot.astype(float)
         
-        
-        
-        
-        # Observer dynamics:
-        
         eta_hat_dot = np.matmul(R, self.nu_hat) + np.matmul(self.L_2, self.y_tilde)
         eta_hat_dot = eta_hat_dot.astype(float)
-        
-        
-        
-        
-        
-        
-        
         
         nu_hat_dot = np.matmul(M_inv, (-np.matmul(D, self.nu_hat) + np.matmul(R_inv, self.bias_hat) + np.matmul(R_inv, np.matmul(self.L_3, self.y_tilde)) + self.tau))
         nu_hat_dot = nu_hat_dot.astype(float)
         
         bias_hat_dot = np.matmul(self.L_4, self.y_tilde)
         bias_hat_dot = bias_hat_dot.astype(float)
-        
-        
-        
         
         # Euler integration:
         self.xsi_hat += xsi_hat_dot*dt
@@ -136,7 +122,8 @@ with open(r"{0}/csad_dp_ws/src/observer/src/params.yaml".format(path)) as file:
     params = yaml.load(file, Loader=yaml.Loader)
 dt = 1.0/params["runfrequency"]
 
-peakFrequency = 1.15*np.pi
+peakFrequency = 1.1
+
 linearObserver = Observer(dt, peakFrequency)
 
 def loop():

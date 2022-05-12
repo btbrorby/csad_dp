@@ -99,7 +99,7 @@ imu4_z = []
 tauX = []
 tauY = []
 tauN = []
-
+i = 0
 initialTime = bag.get_start_time()
 topicsAvailable = bag.get_type_and_topic_info()
 for topic, msg, t in bag.read_messages(topics={'/qualisys/Body_1/odom',
@@ -111,6 +111,7 @@ for topic, msg, t in bag.read_messages(topics={'/qualisys/Body_1/odom',
                                                '/imu3',
                                                '/imu4',
                                                '/CSAD/tau'}):
+    
     if topic == '/qualisys/Body_1/odom':
         T = Time(t.secs, t.nsecs)
         time.append(T.to_sec()-initialTime)
@@ -144,12 +145,16 @@ for topic, msg, t in bag.read_messages(topics={'/qualisys/Body_1/odom',
     
     elif topic == '/waveElevation':
         waveElevation.append(msg.elevation)
+        Tp = msg.Tp
+        Hs = msg.Hs
+        title = 'Seastate: Tp=' + str(Tp) + ' s , Hs=' + str(Hs) + ' m'
         
     elif topic =='/waveLoads':
         timeWave.append(msg.data[0])
         waveLoadX.append(msg.data[1])
         waveLoadY.append(msg.data[2])
         waveLoadN.append(msg.data[6])
+        
     
     elif topic == '/imu1':
         imu1_x.append(msg.linear_acceleration.x)
@@ -252,9 +257,10 @@ for ax in ax2[:,1]:
 
 """Plotting wave elevation"""
 fig3, ax3 = plt.subplots(2,2)
-# ax3[0,0].plot(timeWave, waveElevation, label="Wave elevation")
-# ax3[0,0].set(ylabel='[m]')
-# ax3[0,0].grid()
+fig3.suptitle(title)
+ax3[0,0].plot(timeWave[:], waveElevation, label="Wave elevation")
+ax3[0,0].set(ylabel='[m]')
+ax3[0,0].grid()
 ax3[1,0].plot(timeWave, waveLoadX, label="Wave load X")
 ax3[1,0].set(ylabel='[N]')
 ax3[1,0].grid()
