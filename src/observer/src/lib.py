@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from pydoc import importfile
+from socket import timeout
 from math_tools import quat2eul, Rzyx
 import rospy
 from std_msgs.msg import Float64MultiArray
@@ -126,7 +127,7 @@ def observerNodeInit():
     node = rospy.init_node('Observer_node')
     rospy.Subscriber("/qualisys/Body_1/odom", Odometry, callback=qualisys.updateQualisysOdometry) #check rostopic list for actual name on odom message!
     rospy.Subscriber("/CSAD/tau", Float64MultiArray, callback=tau.callback)
-    gain_client = dynamic_reconfigure.client.Client('gain_server', timeout=30, config_callback = gains.callback)
+    # gain_client = dynamic_reconfigure.client.Client('gain_server', config_callback = gains.callback)
     
     
    

@@ -9,7 +9,8 @@ import os
 import rospy
 
 class Observer:
-    def __init__(self, dt=0.01, peakFrequency=1.0):
+    def __init__(self, dt=0.02, peakFrequency=1.0):
+        self.dt = dt
         self.xsi_hat = np.zeros([6,1])
         self.eta_hat = np.zeros([3,1])
         self.nu_hat = np.zeros([3,1])
@@ -31,7 +32,7 @@ class Observer:
         L_12 = -(peakFrequency**2.0/omega_c)*L_11
         self.L_1 = np.concatenate((L_11, L_12), 0)
         self.L_2 = omega_c*np.diag([0.01, 0.1, 0.1])
-        self.L_3 = 800.0*np.diag([0.6, 0.9, 0.18])
+        self.L_3 = 800.0*np.diag([0.6, 0.9, 0.5])
         self.L_4 = 0.01*self.L_3
         self.L_4[2,2] *= 0.01
         
@@ -61,13 +62,6 @@ class Observer:
         """
         Observer
         """
-        
-        
-        # Tuning parameters:
-        # L_1 = np.diag([10.0, 10.0, 10.0])
-        # L_2 = np.diag([50.0, 50.0, 50.0])
-        # L_3 = np.diag([1.0, 1.0, 1.0])
-        
         MRB = np.array([[127.92, 0.0, 0.0],
                         [0.0, 127.92, 0.0],
                         [0.0, 0.0, 61.967]])
@@ -78,15 +72,10 @@ class Observer:
         M_inv = np.linalg.inv(M)
         D = np.array([[80.66, 0.0, 0.0],
                       [0.0, 632.09, 34.67],
-                      [0.0, 34.67, 228.07]])    #taken from data.B(omega=2pi)
-        # D = np.array([[2.332, 0.0, 0.0],
-        #               [0.0, 4.673, 0.0],
-        #               [0.0, 0.0, 0.01675]])
+                      [0.0, 34.67, 228.07]])
         
-        self.eta[2] = rad2pipi(self.eta[2]) #Is this right?
         R = Rzyx(self.eta[2])
         R_inv = np.transpose(R)
-        
         
         y_hat = self.eta_hat + np.matmul(self.C_w, self.xsi_hat)
         self.y_tilde = self.eta - y_hat
@@ -106,13 +95,13 @@ class Observer:
         bias_hat_dot = bias_hat_dot.astype(float)
         
         # Euler integration:
-        self.xsi_hat += xsi_hat_dot*dt
-        self.eta_hat += eta_hat_dot*dt
+        self.xsi_hat += xsi_hat_dot*self.dt
+        self.eta_hat += eta_hat_dot*self.dt
         self.eta_hat[2] = rad2pipi(self.eta_hat[2])
-        self.bias_hat += bias_hat_dot*dt
-        self.nu_hat += nu_hat_dot*dt
+        self.bias_hat += bias_hat_dot*self.dt
+        self.nu_hat += nu_hat_dot*self.dt
         
-        self.time += dt
+        self.time += self.dt
         
         return self.eta_hat, self.nu_hat, self.bias_hat
 
@@ -122,7 +111,8 @@ with open(r"{0}/csad_dp_ws/src/observer/src/params.yaml".format(path)) as file:
     params = yaml.load(file, Loader=yaml.Loader)
 dt = 1.0/params["runfrequency"]
 
-peakFrequency = 1.1
+Tp = 1.15
+peakFrequency = 2.0*np.pi/Tp
 
 linearObserver = Observer(dt, peakFrequency)
 
@@ -147,13 +137,4 @@ def loop():
     
     
     
-    # qualisys.publish()
-    # rospy.spin()
     
-
-# o = Observer(0.01)
-# eta = np.array([1.0, 2.0, 3.0])
-# tau = np.array([4.0, 5.0, 6.0])
-# o.updateStates(eta, tau)
-# [a, b, c] = o.observer_linear()
-# print(a, b, c)

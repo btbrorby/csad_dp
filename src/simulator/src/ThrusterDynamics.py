@@ -6,19 +6,10 @@ import math
 
 from std_msgs.msg import Float64MultiArray
 
-import yaml
-import os
 
-path = os.path.dirname(os.getcwd())
-with open(r"{0}/csad_dp_ws/src/simulator/src/params.yaml".format(path)) as file:
-    params = yaml.load(file, Loader=yaml.Loader)
-    
-global timeStep
-timeStep = 1.0/params["runfrequency"]
-      
 #This class should maybe be in separate python file?
 class ThrusterDynamics:
-    def __init__(self, u=np.zeros([12,1]), dt=timeStep):
+    def __init__(self, u=np.zeros([12,1]), dt=0.02):
         #Initialize thruster dynamics
         self.loads = np.zeros([6,1])
         self.u = u[0:6]
@@ -57,7 +48,7 @@ class ThrusterDynamics:
         n = np.resize(n, (len(n), 1))
 
         #Limits the signal rates based on specified limitations:
-        alpha_actual = self.rateLimiter(alpha, self.alpha_previous, self.alpha_dot_max)        
+        alpha_actual = self.rateLimiter(alpha, self.alpha_previous, self.alpha_dot_max)
         n_actual = self.rateLimiter(n, self.n_previous, self.n_dot_max)
         
         #Calculates the actual actuator loads for each actuator:
@@ -85,13 +76,14 @@ class ThrusterDynamics:
         return n
         
     def saturate(self, signal, min, max):
+        signal = np.resize(signal, (len(signal),1))
         count = 0
         for s in signal:
             if signal[count] < min:
                 signal[count] = min
             elif signal[count] > max:
                 signal[count] = max
-        
+        signal = np.resize(signal, (len(signal),1))
         return signal
     
     def rateLimiter(self, signal, signalPrevious, limit):
@@ -103,12 +95,15 @@ class ThrusterDynamics:
             signalPrevious (_type_): A copy of the previous signal
             limit (_type_): The specified rate limit
         """
+        signal = np.resize(signal, (len(signal),1))
+        signalPrevious = np.resize(signalPrevious, (len(signalPrevious),1))
         count = 0
         for s in signal:
             plussMinus = math_tools.sign(signal[count]-signalPrevious[count]) #negative if signal is decreasing, positive if increasing
             if (plussMinus*(signal[count]-signalPrevious[count])/self.dt > limit):
                 signal[count] = signalPrevious[count] + plussMinus*limit*self.dt
             count += 1
+        signal = np.resize(signal, (len(signal), 1))
         return signal
     
     # Implement a low pass filter for smoothing thrust dynamics (angle shift and setpoint shift).

@@ -14,17 +14,12 @@ import time
 import os
 import yaml
 
-path = os.path.dirname(os.getcwd())
-with open(r"{0}/csad_dp_ws/src/simulator/src/params.yaml".format(path)) as file:
-    params = yaml.load(file, Loader=yaml.Loader)
-    
-global timeStep
-timeStep = 1.0/params["runfrequency"]
+
 
 class CSAD:
     
     
-    def __init__(self, eta0, dt=timeStep):
+    def __init__(self, eta0, dt=0.02):
         self.dt = dt
         self.time = 0.0
         self.RAOForce = data.RAO_FORCE
@@ -55,6 +50,7 @@ class CSAD:
         
         #Subscribes on the u vector from thrust allocation: 
         self.sub_u = rospy.Subscriber('/CSAD/u', Float64MultiArray, queue_size=1)
+        
         
         
     def publish(self):

@@ -5,16 +5,16 @@ from math_tools import Rzyx, rad2pipi
 from matplotlib import pyplot as plt
 import yaml
 import os
-
+import time as tic
 import rospy
 
 class BiasController:
-    def __init__(self,  dt=0.01, eta_d=np.zeros([3,1]), eta_d_dot=np.zeros([3,1]), eta_d_dotdot=np.zeros([3,1])):
+    def __init__(self,  dt=0.02, eta_d=np.zeros([3,1]), eta_d_dot=np.zeros([3,1]), eta_d_dotdot=np.zeros([3,1])):
         self.eta_d = eta_d
         self.eta_d_dot = eta_d_dot
         self.eta_d_dotdot = eta_d_dotdot
         self.dt = dt
-        self.Kp = np.diag([1.0, 1.0, 1.0])
+        self.Kp = np.diag([80.0, 1.0, 1.0])
         self.Kd = 0.0*np.diag([1.0, 1.0, 1.0])
         
     def updateGains(self, Kp, Kd):
@@ -37,14 +37,13 @@ class BiasController:
         return controlOutput
         
         
-        
+     
 path = os.path.dirname(os.getcwd())
 with open(r"{0}/csad_dp_ws/src/controller/src/params.yaml".format(path)) as file:
     params = yaml.load(file, Loader=yaml.Loader)
 dt = 1.0/params["runfrequency"]
 
 controller = BiasController(dt)
-
 def loop():
     eta_hat = observer.eta_hat
     nu_hat = observer.nu_hat
@@ -54,7 +53,7 @@ def loop():
     bias_hat = np.resize(bias_hat, (3,1))
     
     controlOutput = controller.getControlOutput(eta_hat, nu_hat, bias_hat)
-    tau.publish(controlOutput)
+    tau.publish(controlOutput, tau.time)
     
     tau.time += dt
    

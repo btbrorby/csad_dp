@@ -32,7 +32,7 @@ thrusters = ThrusterDynamics(u0, dt=1.0/rate)
 #Seastate:
 Hs = 0.06
 Tp = 1.15
-seastate = Wave(Hs, Tp, stateDescription='rough', angle=0.0*np.pi/180.0, regular = False, dt=1.0/rate)
+seastate = Wave(Hs, Tp, stateDescription='rough', angle=45.0*np.pi/180.0, regular = False, dt=1.0/rate)
 seastate.updateHeading(vessel.eta[5])
     
 if __name__ == '__main__':
@@ -67,8 +67,8 @@ if __name__ == '__main__':
         
         r.sleep()
         # rospy.spin()
-        print("Simulation time:", tic.time()-t0)
-        print("Time step:", tic.time()-t1)
+        print("SIMULATION time:", tic.time()-t0)
+        # print("Time step:", tic.time()-t1)
 
     
     node.destroy_node()

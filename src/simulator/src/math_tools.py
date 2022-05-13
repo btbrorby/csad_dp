@@ -2,6 +2,8 @@
 import numpy as np
 import math
 
+
+
 def ssa(angle):
     """
     Returns the smalles signed angle in [-pi, pi)
@@ -173,4 +175,12 @@ def three2sixDof(x):
 def six2threeDof(x):
     y = np.array([x[0], x[1], x[5]])
     return y
+    
+
+
+def firstOrderLowPass(signal, signal_previous, filteredSignal_previous, omega_c, dT):
+    alpha = (2.0-dT*omega_c)/(2.0+dT*omega_c)
+    beta = dT*omega_c/(2.0+dT*omega_c)
+    filteredSignal = alpha*filteredSignal_previous + beta*(signal+signal_previous)
+    return filteredSignal
     

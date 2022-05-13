@@ -150,9 +150,10 @@ class Tau():
         self.tau = msg.data
         # self.tau_msg.data.index()
     
-    def publish(self, tau):
+    def publish(self, tau, time=0.0):
         self.tau = tau
-        self.tau_msg.data = tau
+        msg = np.concatenate((np.array([[time]]), tau), axis=0)
+        self.tau_msg.data = msg
         self.pub.publish(self.tau_msg)
         
     
@@ -212,7 +213,7 @@ def controllNodeInit():
     rospy.Subscriber("/imu2", Imu, imu2.callback)
     rospy.Subscriber("/imu3", Imu, imu3.callback)
     rospy.Subscriber("/imu4", Imu, imu4.callback)
-    gain_client = dynamic_reconfigure.client.Client('gain_server', timeout=30, config_callback = gains.callback)
+    # gain_client = dynamic_reconfigure.client.Client('gain_server', timeout=30, config_callback = gains.callback)
     
 
 # Destroy node when prompted

@@ -26,12 +26,11 @@ def thrustAllocationExtended(tau_d):
     T_e = np.array([[1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0],
                     [0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0],
                     [-ly[0], lx[0], -ly[1], lx[1], -ly[2], lx[2], -ly[3], lx[3], -ly[4], lx[4], -ly[5], lx[5]]])
-    B = np.matmul(T_e, K_e)
-    B_transpose = np.transpose(B)
+    K_e_inv = np.linalg.inv(K_e)
+    T_e_transpose = np.transpose(T_e)
+    T_e_pseudoInv = np.matmul(T_e_transpose, np.linalg.inv(np.matmul(T_e, T_e_transpose)))
     
-    B_inv = np.matmul(B_transpose, (np.linalg.inv(np.matmul(B, B_transpose))))
-    
-    u_e = np.matmul(B_inv, tau_d)
+    u_e = np.matmul(np.matmul(K_e_inv, T_e_pseudoInv), tau_d)
     
     u_1 = np.math.sqrt(u_e[0]**2 + u_e[1]**2)
     u_2 = np.math.sqrt(u_e[2]**2 + u_e[3]**2)
@@ -61,7 +60,4 @@ def loop():
     """
     tau_d = tau.getTau()
     u = thrustAllocationExtended(tau_d)
-    
     u_data.publish(u)
-   
-    # rospy.spin()

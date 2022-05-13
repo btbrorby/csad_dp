@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from pickletools import float8
+from time import sleep
 from matplotlib import pyplot as plt
 import os
 
@@ -41,7 +42,7 @@ def quat2eul(w, x, y, z):
 
 
 
-fileName = 'testbag.bag'
+fileName = 'biastest.bag'
 pathName = "{0}/csad_dp_ws/bags/"+fileName
 
 path = os.path.dirname(os.getcwd())
@@ -99,6 +100,23 @@ imu4_z = []
 tauX = []
 tauY = []
 tauN = []
+timeTau = []
+
+u1 = []
+u2 = []
+u3 = []
+u4 = []
+u5 = []
+u6 =[]
+alpha1 = []
+alpha2 = []
+alpha3 = []
+alpha4 = []
+alpha5 = []
+alpha6 = []
+timeU = []
+
+
 i = 0
 initialTime = bag.get_start_time()
 topicsAvailable = bag.get_type_and_topic_info()
@@ -110,7 +128,8 @@ for topic, msg, t in bag.read_messages(topics={'/qualisys/Body_1/odom',
                                                '/imu2',
                                                '/imu3',
                                                '/imu4',
-                                               '/CSAD/tau'}):
+                                               '/CSAD/tau',
+                                               '/CSAD/u'}):
     
     if topic == '/qualisys/Body_1/odom':
         T = Time(t.secs, t.nsecs)
@@ -174,9 +193,29 @@ for topic, msg, t in bag.read_messages(topics={'/qualisys/Body_1/odom',
         imu4_z.append(msg.linear_acceleration.z)
     
     elif topic == '/CSAD/tau':
-        tauX.append(msg.data[0])
-        tauY.append(msg.data[1])
-        tauN.append(msg.data[2])
+        tauX.append(msg.data[1])
+        tauY.append(msg.data[2])
+        tauN.append(msg.data[3])
+        timeTau.append(msg.data[0])
+        
+    elif topic == '/CSAD/u':
+        
+        u1.append(msg.data[0])
+        u2.append(msg.data[1])
+        u3.append(msg.data[2])
+        u4.append(msg.data[3])
+        u5.append(msg.data[4])
+        u6.append(msg.data[5])
+        alpha1.append(msg.data[6])
+        alpha2.append(msg.data[7])
+        alpha3.append(msg.data[8])
+        alpha4.append(msg.data[9])
+        alpha5.append(msg.data[10])
+        alpha6.append(msg.data[11])
+        T = Time(int(msg.data[-2]), int(msg.data[-1]))
+        timeU.append(T.to_sec()-initialTime)
+        
+        
         
     
     
@@ -258,9 +297,9 @@ for ax in ax2[:,1]:
 """Plotting wave elevation"""
 fig3, ax3 = plt.subplots(2,2)
 fig3.suptitle(title)
-ax3[0,0].plot(timeWave[:], waveElevation, label="Wave elevation")
-ax3[0,0].set(ylabel='[m]')
-ax3[0,0].grid()
+# ax3[0,0].plot(timeWave[0:-1], waveElevation, label="Wave elevation")
+# ax3[0,0].set(ylabel='[m]')
+# ax3[0,0].grid()
 ax3[1,0].plot(timeWave, waveLoadX, label="Wave load X")
 ax3[1,0].set(ylabel='[N]')
 ax3[1,0].grid()
@@ -279,7 +318,49 @@ ax3[1,1].set(xlabel='time [s]')
 for ax in ax3[:,1]:
     ax.ticklabel_format(axis='y', style='scientific', scilimits=(0,0))
     ax.legend(loc='upper right')
+    
+    
+"""Plotting controller output"""
+fig, ax4 = plt.subplots(3,1)
+ax4[0].plot(timeTau, tauX)
+ax4[0].plot(timeTau, tauY)
+ax4[0].plot(timeTau, tauN)
 
+ax4[1].plot(timeU, u1)
+ax4[1].plot(timeU, u2)
+ax4[1].plot(timeU, u3)
+ax4[1].plot(timeU, u4)
+ax4[1].plot(timeU, u5)
+ax4[1].plot(timeU, u6)
+# ax4[1].plot(timeU, np.sum((u1, u2, u3, u4, u5, u6), axis=0))
+ax4[2].plot(timeU, alpha1)
+ax4[2].plot(timeU, alpha2)
+ax4[2].plot(timeU, alpha3)
+ax4[2].plot(timeU, alpha4)
+ax4[2].plot(timeU, alpha5)
+ax4[2].plot(timeU, alpha6)
+
+# fig4, ax4 = plt.subplots(3,1)
+# n = len(timeWave)
+# fhat = np.fft.fft(waveLoadX, n)
+# PSD = fhat*np.conj(fhat)/n
+# F = (2*np.pi/(0.02*n))*np.arange(n)
+# L = np.arange(1,np.floor(n/2), dtype='int')
+# ax4[0].plot(F[L], fhat[L])
+# print(type(waveLoadX), np.shape(waveLoadX))
+# filteredLoad = 1.0/(np.divide(waveLoadX,2.0) + 1.0)
+
+# ax4[1].plot(timeWave, waveLoadX)
+
+# y = waveLoadX
+# T = 0.02
+# cutoff = 7.5
+# alpha = (2.0-T*cutoff)/(2.0+T*cutoff)
+# beta = T*cutoff/(2.0+T*cutoff)
+# for i in range(1, len(waveLoadX)):
+#     y[i] = alpha*y[i-1] + beta*(waveLoadX[i] + waveLoadX[i-1])
+    
+# ax4[1].plot(timeWave, y)
 
 
 

@@ -16,7 +16,9 @@ class UVector():
         return self.Udata 
     
     def publish(self, u=np.array([12,1])):
-        self.u_message.data = u
+        t = rospy.Time.now()
+        uWithTime = np.insert(u, 12, np.array([t.secs, t.nsecs]))
+        self.u_message.data = uWithTime
         self.pub.publish(self.u_message)
         
 
