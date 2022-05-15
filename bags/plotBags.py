@@ -3,7 +3,6 @@ from pickletools import float8
 from time import sleep
 from matplotlib import pyplot as plt
 import os
-
 from tables import Float32Col
 import rosbag
 from rospy import Time
@@ -230,7 +229,7 @@ for topic, msg, t in bag.read_messages(topics={'/qualisys/Body_1/odom',
         trueTauY.append(msg.data[1])
         trueTauN.append(msg.data[2])
         
-    
+
     
 """Plotting states"""
 fig0, ax0 = plt.subplots(3,1)
@@ -346,6 +345,7 @@ ax4[1].plot(timeU, u3, label="u3")
 ax4[1].plot(timeU, u4, label="u4")
 ax4[1].plot(timeU, u5, label="u5")
 ax4[1].plot(timeU, u6, label="u6")
+ax4[1].axhline(y=0.5, color='k', linestyle='--')
 ax4[1].grid()
 # ax4[1].plot(timeU, np.sum((u1, u2, u3, u4, u5, u6), axis=0))
 ax4[2].plot(timeU, alpha1, label="alpha1")
