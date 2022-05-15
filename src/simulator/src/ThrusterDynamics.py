@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 import numpy as np
+import rospkg
 import math_tools
 import generateModelData_CSAD as data
 import math
+import rospy
 
 from std_msgs.msg import Float64MultiArray
 
@@ -31,6 +33,8 @@ class ThrusterDynamics:
         
         self.msg_u = Float64MultiArray()
         
+        self.pub = rospy.Publisher('/CSAD/trueThrustLoads', Float64MultiArray, queue_size=1)
+        
         
     def actualThrustLoads(self, u, alpha):
         """
@@ -42,7 +46,6 @@ class ThrusterDynamics:
         """
         Lx = np.resize(self.Lx, (len(self.Lx), 1))
         Ly = np.resize(self.Ly, (len(self.Ly), 1))
-        
         #Calculates the propeller revolution based on desired actuator inputs:
         n = self.propellerRevolution(u)
         n = np.resize(n, (len(n), 1))
@@ -50,13 +53,12 @@ class ThrusterDynamics:
         #Limits the signal rates based on specified limitations:
         alpha_actual = self.rateLimiter(alpha, self.alpha_previous, self.alpha_dot_max)
         n_actual = self.rateLimiter(n, self.n_previous, self.n_dot_max)
-        
         #Calculates the actual actuator loads for each actuator:
-        actuatorLoads = data.rho*(data.propellerDiameter**4)*(np.matmul(data.K, np.abs(n)*n))
+        # actuatorLoads1 = data.rho*(data.propellerDiameter**4)*(np.matmul(data.K, np.abs(n)*n))
+        actuatorLoads = np.matmul(data.K, n_actual*np.abs(n_actual))
         
         #Saturates the actuator loads based on specified limitations:
         actuatorLoads = self.saturate(actuatorLoads, -data.thrust_max, data.thrust_max)
-        
         #Summerize contributions from each eactuator and converts them to specific loads in body frame:
         loads = np.zeros([6,1])
         loads[0] = np.sum(actuatorLoads*np.cos(alpha))
@@ -66,7 +68,6 @@ class ThrusterDynamics:
         #Stores previous signals. Used for limit the signal rates:
         self.alpha_previous = alpha_actual 
         self.n_previous = n 
-
         return loads, n_actual, alpha_actual
     
     
@@ -120,5 +121,11 @@ class ThrusterDynamics:
         self.u = np.resize(self.u, (6, 1))
         self.alpha = controlInput.data[6:12]
         self.alpha = np.resize(self.alpha, (6, 1))
+        
+    def publish(self, loads):
+        msg=Float64MultiArray()
+        msg.data = loads
+        self.pub.publish(msg)
+        
 
     

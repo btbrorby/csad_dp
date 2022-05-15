@@ -32,7 +32,7 @@ thrusters = ThrusterDynamics(u0, dt=1.0/rate)
 #Seastate:
 Hs = 0.06
 Tp = 1.15
-seastate = Wave(Hs, Tp, stateDescription='rough', angle=45.0*np.pi/180.0, regular = False, dt=1.0/rate)
+seastate = Wave(Hs, Tp, stateDescription='rough', angle=0.0*np.pi/180.0, regular = False, dt=1.0/rate)
 seastate.updateHeading(vessel.eta[5])
     
 if __name__ == '__main__':
@@ -58,6 +58,7 @@ if __name__ == '__main__':
         gnss.setOdometry(vessel.eta, vessel.nu, vessel.eta_dot, vessel.nu_dot)
         
         vessel.publish()
+        thrusters.publish(tau_thr)
         seastate.publish(tauWave=tau_wave)
         imu1.publish()
         imu2.publish()

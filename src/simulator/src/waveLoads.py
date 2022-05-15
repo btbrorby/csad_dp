@@ -336,7 +336,7 @@ class Wave():
         
         self.time += self.dt
         
-        return slowlyVaryingLoads + driftLoads + firstOrderLoads
+        return -slowlyVaryingLoads - driftLoads - firstOrderLoads
     
     
         

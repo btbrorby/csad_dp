@@ -152,7 +152,7 @@ class Tau():
     
     def publish(self, tau, time=0.0):
         self.tau = tau
-        msg = np.concatenate((np.array([[time]]), tau), axis=0)
+        msg = np.concatenate((tau, np.array([[time]])), axis=0)
         self.tau_msg.data = msg
         self.pub.publish(self.tau_msg)
         

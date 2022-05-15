@@ -26,14 +26,13 @@ class CSAD:
         #Initialzing states
         self.eta = eta0
         self.nu = np.zeros([6,1])
-        self.nu = 0.0*np.ones([6, 1])
         
         self.bias = np.zeros([6,1])
         self.eta_dot = np.zeros([6,1])
         self.nu_dot = np.zeros([6,1])
         self.bias_dot = np.zeros([6,1])
         
-        self.T_b = 1000.0*np.eye(6)   # Tuning bias 2~3 times larger than the wave period(?) Make function for this!
+        self.T_b = (1000.0/90.0)*np.eye(6)   # Tuning bias 2~3 times larger than the wave period(?) Make function for this!
         self.biasMean = 0.0     # Defining white noise
         self.biasStd = 0.01      # Defining white noise
         
@@ -109,7 +108,6 @@ class CSAD:
         
         tauEnv = np.resize(tauEnv, (6,1))
         tauThr = np.resize(tauThr, (6,1))
-
         index = np.argmin(np.abs(data.frequencies - waveFreq)) #Should probably be a interpolation instead...
         A = data.A[:,:,index]   #Added mass
         B = data.B[:,:,index]   #Potential + viscous damping

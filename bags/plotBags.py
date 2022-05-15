@@ -66,6 +66,9 @@ z_dot = []
 roll_dot = []
 pitch_dot = []
 yaw_dot = []
+biasX = []
+biasY = []
+biasYaw = []
 
 time_hat = []
 x_hat = []
@@ -102,6 +105,10 @@ tauY = []
 tauN = []
 timeTau = []
 
+trueTauX = []
+trueTauY = []
+trueTauN = []
+
 u1 = []
 u2 = []
 u3 = []
@@ -129,7 +136,8 @@ for topic, msg, t in bag.read_messages(topics={'/qualisys/Body_1/odom',
                                                '/imu3',
                                                '/imu4',
                                                '/CSAD/tau',
-                                               '/CSAD/u'}):
+                                               '/CSAD/u',
+                                               '/CSAD/trueThrustLoads'}):
     
     if topic == '/qualisys/Body_1/odom':
         T = Time(t.secs, t.nsecs)
@@ -193,10 +201,10 @@ for topic, msg, t in bag.read_messages(topics={'/qualisys/Body_1/odom',
         imu4_z.append(msg.linear_acceleration.z)
     
     elif topic == '/CSAD/tau':
-        tauX.append(msg.data[1])
-        tauY.append(msg.data[2])
-        tauN.append(msg.data[3])
-        timeTau.append(msg.data[0])
+        tauX.append(msg.data[0])
+        tauY.append(msg.data[1])
+        tauN.append(msg.data[2])
+        timeTau.append(msg.data[3])
         
     elif topic == '/CSAD/u':
         
@@ -215,7 +223,12 @@ for topic, msg, t in bag.read_messages(topics={'/qualisys/Body_1/odom',
         T = Time(int(msg.data[-2]), int(msg.data[-1]))
         timeU.append(T.to_sec()-initialTime)
         
+    
         
+    elif topic == '/CSAD/trueThrustLoads':
+        trueTauX.append(msg.data[0])
+        trueTauY.append(msg.data[1])
+        trueTauN.append(msg.data[2])
         
     
     
@@ -275,7 +288,7 @@ ax2[2,0].set(ylabel='[rad]')
 ax2[2,0].set(xlabel='time [s]')
 for ax in ax2[:,0]:
     ax.ticklabel_format(axis='y', style='scientific', scilimits=(0,0))
-    ax.legend(loc='upper right')
+    ax.legend(loc='lower right')
 ax2[0,1].plot(time, x_dot, label='u')
 ax2[0,1].plot(time_hat, x_dot_hat, 'r--', label='u_hat')
 ax2[0,1].grid()
@@ -322,23 +335,31 @@ for ax in ax3[:,1]:
     
 """Plotting controller output"""
 fig, ax4 = plt.subplots(3,1)
-ax4[0].plot(timeTau, tauX)
-ax4[0].plot(timeTau, tauY)
-ax4[0].plot(timeTau, tauN)
-
-ax4[1].plot(timeU, u1)
-ax4[1].plot(timeU, u2)
-ax4[1].plot(timeU, u3)
-ax4[1].plot(timeU, u4)
-ax4[1].plot(timeU, u5)
-ax4[1].plot(timeU, u6)
+ax4[0].plot(timeTau, tauX, label="tau_thr X")
+ax4[0].plot(timeTau, tauY, label="tau_thr Y")
+ax4[0].plot(timeTau, tauN, label="tau_thr N")
+ax4[0].grid()
+# print(trueTauX)
+ax4[1].plot(timeU, u1, label="u1")
+ax4[1].plot(timeU, u2, label="u2")
+ax4[1].plot(timeU, u3, label="u3")
+ax4[1].plot(timeU, u4, label="u4")
+ax4[1].plot(timeU, u5, label="u5")
+ax4[1].plot(timeU, u6, label="u6")
+ax4[1].grid()
 # ax4[1].plot(timeU, np.sum((u1, u2, u3, u4, u5, u6), axis=0))
-ax4[2].plot(timeU, alpha1)
-ax4[2].plot(timeU, alpha2)
-ax4[2].plot(timeU, alpha3)
-ax4[2].plot(timeU, alpha4)
-ax4[2].plot(timeU, alpha5)
-ax4[2].plot(timeU, alpha6)
+ax4[2].plot(timeU, alpha1, label="alpha1")
+ax4[2].plot(timeU, alpha2, label="alpha2")
+ax4[2].plot(timeU, alpha3, label="alpha3")
+ax4[2].plot(timeU, alpha4, label="alpha4")
+ax4[2].plot(timeU, alpha5, label="alpha5")
+ax4[2].plot(timeU, alpha6, label="alpha6")
+ax4[2].grid()
+for ax in ax4:
+    ax.ticklabel_format(axis='y', style='scientific', scilimits=(0,0))
+    ax.legend(loc='upper right')
+
+
 
 # fig4, ax4 = plt.subplots(3,1)
 # n = len(timeWave)

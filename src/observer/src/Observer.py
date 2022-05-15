@@ -31,10 +31,10 @@ class Observer:
         L_11 = -2.0*(1.0-0.1)*(omega_c/peakFrequency)*np.diag([1.0, 1.0, 1.0])
         L_12 = -(peakFrequency**2.0/omega_c)*L_11
         self.L_1 = np.concatenate((L_11, L_12), 0)
-        self.L_2 = omega_c*np.diag([0.01, 0.1, 0.1])
-        self.L_3 = 800.0*np.diag([0.6, 0.9, 0.5])
-        self.L_4 = 0.01*self.L_3
-        self.L_4[2,2] *= 0.01
+        self.L_2 = omega_c*np.diag([0.1, 0.1, 0.01])
+        self.L_3 = 800.0*np.diag([0.6, 1.9, 1.5])
+        self.L_4 = 0.1*self.L_3
+        self.L_4[2,2] *= 0.1
         
         dampingRatio = 0.1
         Omega = peakFrequency*np.eye(3)
@@ -69,6 +69,9 @@ class Observer:
                        [0.0, 28.89, 0.525],
                        [0.0, 0.525, 13.98]])
         M = MRB + MA
+        M = np.array([[140.0, 0.0, 0.0],
+                      [0.0, 228.0, 7.34],
+                      [0.0, 7.34, 104.9]])
         M_inv = np.linalg.inv(M)
         D = np.array([[80.66, 0.0, 0.0],
                       [0.0, 632.09, 34.67],
