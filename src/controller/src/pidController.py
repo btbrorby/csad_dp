@@ -49,7 +49,7 @@ def sixaxis2thruster(lStickX, lStickY, rStickX, rStickY, xbutton):
 
 
 class PID:
-    def __init__(self, dt=0.01, eta_d=np.zeros([3,1]), eta_d_dot=np.zeros([3,1]), eta_d_dotdot=np.zeros([3,1])):
+    def __init__(self, dt=0.02, eta_d=np.zeros([3,1]), eta_d_dot=np.zeros([3,1]), eta_d_dotdot=np.zeros([3,1])):
         self.eta_d = eta_d
         self.eta_d_dot = eta_d_dot
         self.eta_d_dotdot = eta_d_dotdot

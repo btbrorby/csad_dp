@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 import yaml
 import os
 import rospy
-
 class Observer:
     def __init__(self, dt=0.02, peakFrequency=1.0):
         self.dt = dt

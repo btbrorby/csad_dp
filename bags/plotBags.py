@@ -40,8 +40,7 @@ def quat2eul(w, x, y, z):
 
 
 
-
-fileName = 'biastest.bag'
+fileName = 'testbag.bag'
 pathName = "{0}/csad_dp_ws/bags/"+fileName
 
 path = os.path.dirname(os.getcwd())
@@ -330,8 +329,7 @@ ax3[1,1].set(xlabel='time [s]')
 for ax in ax3[:,1]:
     ax.ticklabel_format(axis='y', style='scientific', scilimits=(0,0))
     ax.legend(loc='upper right')
-    
-    
+
 """Plotting controller output"""
 fig, ax4 = plt.subplots(3,1)
 ax4[0].plot(timeTau, tauX, label="tau_thr X")

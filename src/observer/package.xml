@@ -60,6 +60,7 @@
   <build_export_depend>sensor_msgs</build_export_depend>
   <build_export_depend>std_msgs</build_export_depend>
   <build_export_depend>dynamic_reconfigure</build_export_depend>
+  <build_export_depend>simulator</build_export_depend>
   <exec_depend>nav_msgs</exec_depend>
   <exec_depend>rospy</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>

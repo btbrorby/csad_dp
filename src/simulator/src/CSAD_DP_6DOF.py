@@ -113,7 +113,6 @@ class CSAD:
         B = data.B[:,:,index]   #Potential + viscous damping
         C = data.C[:,:,index]   #Restoring forces
         # B[3, 3] *= 10.0
-        
         M = A + data.MRB
         B[3,3] = 2.0*np.sqrt(M[3,3]*C[3,3])*0.1
         Minv = np.linalg.inv(M)

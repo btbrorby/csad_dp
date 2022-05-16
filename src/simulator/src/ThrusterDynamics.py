@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from time import sleep
 import numpy as np
 import rospkg
 import math_tools
@@ -51,14 +52,15 @@ class ThrusterDynamics:
         n = np.resize(n, (len(n), 1))
 
         #Limits the signal rates based on specified limitations:
-        alpha_actual = self.rateLimiter(alpha, self.alpha_previous, self.alpha_dot_max)
-        n_actual = self.rateLimiter(n, self.n_previous, self.n_dot_max)
+        alpha_actual = self.rateLimiter(alpha, self.alpha_previous, self.alpha_dot_max*self.dt)
+        n_actual = self.rateLimiter(n, self.n_previous, self.n_dot_max*self.dt)
         #Calculates the actual actuator loads for each actuator:
         # actuatorLoads1 = data.rho*(data.propellerDiameter**4)*(np.matmul(data.K, np.abs(n)*n))
         actuatorLoads = np.matmul(data.K, n_actual*np.abs(n_actual))
         
         #Saturates the actuator loads based on specified limitations:
         actuatorLoads = self.saturate(actuatorLoads, -data.thrust_max, data.thrust_max)
+        
         #Summerize contributions from each eactuator and converts them to specific loads in body frame:
         loads = np.zeros([6,1])
         loads[0] = np.sum(actuatorLoads*np.cos(alpha))

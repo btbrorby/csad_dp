@@ -20,7 +20,7 @@ class GNSS():
     """
     This class simulates the GNSS signals, or the odometry given from qualisys.
     """
-    def __init__(self, dt=0.01):
+    def __init__(self, dt=0.02):
         self.dt = dt
         self.time = 0.0
         
@@ -87,7 +87,7 @@ class IMU():
     This class simulates imu measurements located on a vessel. The location have to be specified in sensorParams.yaml
     acc_tilde = acc + bias + whiteNoise
     """
-    def __init__(self, id, dt=0.01):
+    def __init__(self, id, dt=0.02):
         self.time = 0.0
         
         self.id = id

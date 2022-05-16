@@ -9,14 +9,18 @@ import time as tic
 import rospy
 
 class BiasController:
-    def __init__(self,  dt=0.02, eta_d=np.ones([3,1]), eta_d_dot=np.zeros([3,1]), eta_d_dotdot=np.zeros([3,1])):
+    def __init__(self,  dt=0.02, eta_d=0.0*np.ones([3,1]), eta_d_dot=np.zeros([3,1]), eta_d_dotdot=np.zeros([3,1])):
         self.eta_d = eta_d
         self.eta_d[2] = rad2pipi(self.eta_d[2])
         self.eta_d_dot = eta_d_dot
         self.eta_d_dotdot = eta_d_dotdot
         self.dt = dt
-        self.Kp = np.diag([30.0, 0.0, 0.0])
-        self.Kd = np.diag([30.0, 0.0, 0.0])
+        # self.Kp = np.diag([30.0, 30.0, 40.0])
+        self.Kp = 2.0*np.pi*2.0*np.pi*np.array([[1.8982, 0.0, 0.0],
+                                                [0.0, 197.0, 0.0],
+                                                [0.0, 0.0, 0.0]])
+        # self.Kd = np.diag([10.3, 0.0, 0.0])
+        self.Kd = np.diag([204.8, 0.0, 0.0])
         
     def updateGains(self, Kp, Kd):
         self.Kp = Kp
