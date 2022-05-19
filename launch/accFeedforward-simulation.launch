@@ -7,15 +7,15 @@
         <param name="fixed_frame_id" value="simulator"/>
         <rosparam param="model_list">[]</rosparam>
     </node>
-    <node pkg="gain_server"
+    <!-- <node pkg="gain_server"
         type="server.py"
         name="gain_server">
-    </node>
-    <node pkg="observer"
+    </node> -->
+    <!-- <node pkg="observer"
         type="observer_node.py"
         name="Observer_node"
         output="screen">
-    </node>
+    </node> -->
     <node pkg="controller"
         type="accFeedforwardController_node.py"
         name="accFeedforwardController_node"

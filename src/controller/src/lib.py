@@ -2,6 +2,7 @@
 import rospy
 from sensor_msgs.msg import Joy, Imu
 from nav_msgs.msg import Odometry
+from math_tools import quat2eul
 import numpy as np
 import dynamic_reconfigure.client
 from std_msgs.msg import Float64MultiArray
@@ -58,6 +59,58 @@ class UVector():
     def callback(self, udata):
         self.Udata = udata
     
+class ThrustLoads():
+    def __init__(self):
+        self.tau = np.zeros([6,1])
+        self.message = Float64MultiArray()
+        
+    def getThrustLoads(self):
+        return self.tau
+    
+    def callback(self, msg = Float64MultiArray()):
+        self.tau = msg.data
+class Qualisys():
+    """
+    Retrieves qualisys measurements by listening to the /qualisys/CSEI/odom topic
+    """
+    def __init__(self):
+        self.odom = Odometry()
+        self.eta = np.zeros([6,1])
+        self.nu = np.zeros([6,1])
+
+    def updateQualisysOdometry(self, data=Odometry()):
+        self.odom = data
+
+    def getQualisysOdometry(self):
+        w = self.odom.pose.pose.orientation.w
+        x = self.odom.pose.pose.orientation.x
+        y = self.odom.pose.pose.orientation.y
+        z = self.odom.pose.pose.orientation.z
+        [roll, pitch, yaw] = quat2eul(w, x, y, z)
+        
+        self.eta[0] = self.odom.pose.pose.position.x
+        self.eta[1] = self.odom.pose.pose.position.y
+        self.eta[2] = self.odom.pose.pose.position.z
+        self.eta[3] = roll
+        self.eta[4] = pitch
+        self.eta[5] = yaw
+        
+        self.nu[0] = self.odom.twist.twist.linear.x
+        self.nu[1] = self.odom.twist.twist.linear.y
+        self.nu[2] = self.odom.twist.twist.linear.z
+        self.nu[3] = self.odom.twist.twist.angular.x
+        self.nu[4] = self.odom.twist.twist.angular.y
+        self.nu[5] = self.odom.twist.twist.angular.z
+        
+        
+        return self.eta, self.nu
+    
+    def publish(self):
+        self.true_pos_msg.x = self.eta[0]
+        self.true_pos_msg.y = self.eta[1]
+        self.true_pos_msg.z = self.eta[2]
+        self.true_pos_pub.publish(self.true_pos_msg)
+
 
 class Observer_Converser():
     def __init__(self):
@@ -191,10 +244,11 @@ class IMU():
 # Build the objects to be imported
 ps4 = Controller()
 u_data = UVector() #used for manual controller
-odometry = Odometry()
+qualisys = Qualisys()
 observer = Observer_Converser()
 gains = Controller_Gains()
 reference = Reference_Converser()
+thrust = ThrustLoads()
 tau = Tau()
 imu1 = IMU(1)
 imu2 = IMU(2)
@@ -208,11 +262,15 @@ def controllNodeInit():
     node = rospy.init_node('Controller_node')
     rospy.Subscriber("/joy", Joy, ps4.updateState)
     rospy.Subscriber("/CSAD/state_estimate", observer_message, observer.callback)
+    rospy.Subscriber("/qualisys/Body_1/odom", Odometry, qualisys.updateQualisysOdometry)
     # rospy.Subscriber("/CSAD/reference", reference_message, reference.callback)
     rospy.Subscriber("/imu1", Imu, imu1.callback)
     rospy.Subscriber("/imu2", Imu, imu2.callback)
     rospy.Subscriber("/imu3", Imu, imu3.callback)
     rospy.Subscriber("/imu4", Imu, imu4.callback)
+    
+    rospy.Subscriber("/CSAD/trueThrustLoads", Float64MultiArray, thrust.callback)
+    
     # gain_client = dynamic_reconfigure.client.Client('gain_server', timeout=30, config_callback = gains.callback)
     
 

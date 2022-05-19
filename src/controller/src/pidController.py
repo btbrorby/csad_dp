@@ -2,7 +2,7 @@
 import rospy
 import numpy as np
 import math
-from lib import odometry, observer, reference, ps4, u_data, gains, tau
+from lib import observer, reference, ps4, u_data, gains, tau
 from math_tools import Rzyx, rad2pipi
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Float64MultiArray
@@ -54,9 +54,10 @@ class PID:
         self.eta_d_dot = eta_d_dot
         self.eta_d_dotdot = eta_d_dotdot
         self.z = 0.0
-        self.Kp = np.diag([0.0, 0.0, 0.0])
-        self.Ki = np.diag([0.0, 0.0, 0.0])
-        self.Kd = np.diag([0.0, 0.0, 0.0])
+        self.dt = dt
+        self.Kp = 2.0*np.pi*2.0*np.pi*np.diag([1.8982, 197.0, 0.0])
+        self.Ki = np.diag([25.0, 0.0, 0.0])
+        self.Kd = np.diag([204.8, 0.0, 0.0])
         
         
     def getControllerOutput(self, eta_hat, nu_hat):
@@ -65,13 +66,12 @@ class PID:
         """
         R = Rzyx(eta_hat[2])
         R_inv = np.transpose(R)
-        dt = 0.01 #Should be depending on yaml file!!!
         
         eta_hat_dot = np.matmul(R, nu_hat)
         eta_hat_dot = np.resize(eta_hat_dot, (3,1))
         
         z_dot = eta_hat - self.eta_d
-        self.z += z_dot*dt
+        self.z += z_dot*self.dt
         self.z[2] = rad2pipi(self.z[2])
         
         nu_d = np.matmul(R_inv, self.eta_d_dot)
@@ -103,7 +103,7 @@ def loop():
     
     controllerOutput = controller.getControllerOutput(eta_hat, nu_hat)
     
-    tau.publish(controllerOutput)
+    tau.publish(controllerOutput, tau.time)
     tau.time += dt
     
     # if CIRCLE is pressed, mode shift between manual control and dp control

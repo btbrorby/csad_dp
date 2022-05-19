@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import numpy as np
 import math
-from lib import odometry, observer, reference, ps4, u_data, gains, tau, imu1, imu2, imu3, imu4
+from lib import qualisys, observer, reference, ps4, u_data, gains, tau, imu1, imu2, imu3, imu4, thrust
 from math_tools import Rzyx, rad2pipi
 from matplotlib import pyplot as plt
 import yaml
@@ -9,12 +9,14 @@ import os
 
 import rospy
 
-
+paramPath = os.path.dirname(os.getcwd())
+with open(r"{0}/csad_dp_ws/src/simulator/src/sensorParams.yaml".format(paramPath)) as file:
+    paramsImu = yaml.load(file, Loader=yaml.Loader)
 class AccFeedforwardController:
-    def __init__(self, dt, eta0 = np.zeros([3, 1]), nu0 = np.zeros([3, 1]), eta_d = np.zeros([3, 1]), eta_d_dot = np.zeros([3, 1]), eta_d_dotdot = np.zeros([3, 1])):
+    def __init__(self, dt=0.02, eta0 = np.zeros([3, 1]), nu0 = np.zeros([3, 1]), eta_d = np.zeros([3, 1]), eta_d_dot = np.zeros([3, 1]), eta_d_dotdot = np.zeros([3, 1])):
         
-        self. dt = dt
-        
+        self.dt = dt
+        self.time = 0.0
         self.eta0 = eta0
         self.nu0 = nu0
         self.eta_d = eta_d
@@ -22,31 +24,43 @@ class AccFeedforwardController:
         self.eta_d_dotdot = eta_d_dotdot
         
         #States:
-        self.nu_hat = nu0
-        self.p_nu_hat = np.zeros([3, 1])
-        self.g_hat = np.zeros([3, 1])
-        self.g_hat[2] = -9.81
-        self.b_l_hat = np.zeros([3, 1])
-        self.omega_hat = np.zeros([3, 1])
-        self.b_w_hat = np.zeros([3, 1])
+        self.nu = nu0
+        self.p_nu = np.zeros([3, 1])
+        self.v = np.zeros([3, 1])
+        self.g = np.zeros([3, 1])
+        self.g[2] = 9.81
+        self.b_l = np.zeros([3, 1])
+        self.omega = np.zeros([3, 1])
+        self.b_w = np.zeros([3, 1])
         
+        self.delta = np.zeros([3, 1])
         self.tau = np.zeros([3, 1])
         
         #Selection matrices:
         self.B_1 = np.zeros([3, 12])
         self.B_2 = np.zeros([3, 12])
-        self.B_1[0,0] = self.B_1[1,0] = self.B_1[2,0] = 1.0
-        self.B_2[0,1] = self.B_2[1,1] = self.B_2[2,1] = 1.0
+        self.B_1[0,0] = self.B_1[1,1] = self.B_1[2,2] = 1.0
+        self.B_2[0,3] = self.B_2[1,4] = self.B_2[2,5] = 1.0
         
         #Tuning gains:
-        I = np.eye(3)
-        self.k1 = np.array([1.0, 1.0, 1.0])*I
-        self.k2 = np.array([1.0, 1.0, 1.0])*I
+        self.Kp = 2.0*np.pi*2.0*np.pi*np.diag([1.8982, 197.0, 0.0])
+        self.Kd = np.diag([204.8, 0.0, 0.0])
+        self.mu = 0.0
         
-        self.D = np.array([[16.43, 0.0, 0.0],
-                           [0.0, 128.77, 0.0],
-                           [0.0, 0.0, 50.51]])
+        self.M = np.array([[140.0, 0.0, 0.0],
+                           [0.0, 228.0, 7.34],
+                           [0.0, 7.34, 104.9]])
         
+        self.D = np.array([[80.66, 0.0, 0.0],
+                           [0.0, 632.09, 34.67],
+                           [0.0, 34.67, 228.07]])
+        
+        
+        G = np.zeros([4*3, 12])
+        for i in range(3, 15, 3):
+            W_l = self.getW(i/3, paramsImu)
+            G[i-3:(i)][:] = W_l
+        self.G_inverse = np.linalg.inv(G)
         # self.imu1 = np.zeros([6, 1])   
         # self.imu2 = np.zeros([6, 1])   
         # self.imu3 = np.zeros([6, 1])   
@@ -83,29 +97,62 @@ class AccFeedforwardController:
         return W_l
         
         
-    def getControlOutput(self, measurements, paramsImu):
+    # def getControlOutput(self, measurements, paramsImu):
+    #     G = np.zeros([4*3, 12])
+    #     for i in range(3, 15, 3):
+    #         W_l = self.getW(i/3, paramsImu)
+    #         G[i-3:(i)][:] = W_l
             
-        G = np.zeros([4*3, 12])
-        for i in range(3, 15, 3):
-            W_l = self.getW(i/3, paramsImu)
-            G[i-3:(i)][:] = W_l
-            
-        G_inverted = np.linalg.inv(G)
+    #     G_inverted = np.linalg.inv(G)
+    #     acc_hat = self.stateObserver(G_inverted, measurements) #measurements are 12 element vector
         
-        acc_hat = controller.stateObserver(G_inverted, measurements) #measurements are 12 element vector
+    #     p_nu_d = np.matmul(np.transpose(Rzyx(self.eta_d[-1])), self.eta_d)
+    #     nu_d = np.matmul(np.transpose(Rzyx(self.eta_d[-1])), self.eta_d_dot)
+    #     nu_d_dot = np.matmul(np.transpose(Rzyx(self.eta_d[-1])), self.eta_d_dotdot)
         
-        p_nu_d = np.matmul(np.transpose(Rzyx(self.eta_d[-1])), self.eta_d)
-        nu_d = np.matmul(np.transpose(Rzyx(self.eta_d[-1])), self.eta_d_dot)
-        nu_d_dot = np.matmul(np.transpose(Rzyx(self.eta_d[-1])), self.eta_d_dotdot)
+    #     p_tilde = self.p_nu_hat - p_nu_d
+    #     nu_tilde = self.nu_hat - nu_d
         
-        p_tilde = self.p_nu_hat - p_nu_d
-        nu_tilde = self.nu_hat - nu_d
+    #     S = self.getS(np.array([0.0, 0.0, self.nu_hat[2]]))
         
-        Gamma = - np.matmul(self.k1, p_tilde) - np.matmul(self.k2, nu_tilde) + nu_d_dot - np.matmul(self.D, self.nu_hat)
-        Delta = acc_hat - self.tau
+    #     Gamma = - np.matmul(self.k1, p_tilde) - np.matmul(self.k2, nu_tilde) + nu_d_dot - np.matmul(self.D, self.nu_hat)
         
-        self.tau = Gamma - Delta
         
+    #     Delta = acc_hat - self.tau
+        
+    #     self.tau = Gamma - Delta
+        
+    #     return self.tau
+    
+    def getControlOutput(self, eta, nu, a_mc, thrustMeasured):
+        
+        R = Rzyx(eta[5])
+        R_transpose = np.transpose(R)
+        
+        [p_nu, v, omega, v_dot, omega_dot] = self.stateObserver(a_mc, eta, nu) 
+        v_dot = np.resize(v_dot, (3,1))
+        omega_dot = np.resize(omega_dot, (3,1))
+        
+        a = np.array([v_dot[0], v_dot[1], omega_dot[2]])
+        a = np.resize(a, (3,1))
+        
+        eta_nu_hat = np.array([p_nu[0], p_nu[1], eta[5]])
+        eta_nu_hat = np.resize(eta_nu_hat, (3,1))
+        eta_body_tilde = p_nu - np.matmul(R_transpose, self.eta_d)
+        
+        nu_hat = np.array([v[0], v[1], omega[2]])
+        nu_hat = np.resize(nu_hat, (3,1))
+        nu_tilde =  nu_hat - np.matmul(R_transpose, self.eta_d_dot)
+        
+        Gamma = - np.matmul(self.Kp, eta_body_tilde) - np.matmul(self.Kd, nu_tilde)
+        print("GAMMA", Gamma)
+        tau0 = np.array([thrustMeasured[0], thrustMeasured[1], thrustMeasured[5]])
+        tau0 = np.resize(tau0, (3,1))
+        
+        delta_dot = self.mu*(np.matmul(self.M, a) - tau0 - Gamma + np.matmul(self.D, nu_hat))
+        self.delta += delta_dot*self.dt
+        
+        self.tau = Gamma - self.delta
         return self.tau
     
     def getS(self, vec):
@@ -118,29 +165,47 @@ class AccFeedforwardController:
         return S
         
     
-    def stateObserver(self, G_inverse, a_mc):
+    def stateObserver(self, a_mc, eta, nu):
         
         b_w_dot = 0.0
         b_l_dot = 0.0
-        omega_dot = self.b_w_hat + np.matmul(np.matmul(self.B_2, G_inverse), a_mc)
-        self.omega_hat += omega_dot*self.dt
         
-        S_omega = self.getS(self.omega_hat)
+        R = Rzyx(eta[5])
+        R_transposed = np.transpose(R)
+        p_nu = np.matmul(R_transposed, eta[0:3])
+        p_nu = np.resize(p_nu, (3,1))
+        omega = nu[3:6]
+        omega = np.resize(omega, (3,1))
+        v = nu[0:3]
+        v = np.resize(v, (3,1))
         
-        g_dot = -np.matmul(S_omega, self.g_hat)
-        g_dot = g_dot.astype(float)
-        self.g_hat += g_dot*self.dt
+        S_omega = self.getS(omega)
         
-        nu_dot = -np.matmul(S_omega, self.nu_hat) - self.b_l_hat - self.g_hat + np.matmul(np.matmul(self.B_1, G_inverse), a_mc)
-        nu_dot = nu_dot.astype(float)
-        self.nu_hat += nu_dot*self.dt
-        
-        p_nu_dot = -np.matmul(S_omega, self.p_nu_hat) + self.nu_hat
+        p_nu_dot = -np.matmul(S_omega, p_nu) + v
         p_nu_dot = p_nu_dot.astype(float)
-        self.p_nu_hat += p_nu_dot*self.dt
         
-        # x = np.transpose(np.array([self.p_nu_hat, self.nu_hat, self.b_l_hat, self.g_hat, self.omega_hat, self.b_w_hat]))
-        return nu_dot
+        v_dot = -np.matmul(S_omega, v) - self.b_l - self.g + np.matmul(np.matmul(self.B_1, self.G_inverse), a_mc)
+        v_dot = v_dot.astype(float)
+        
+        g_dot = -np.matmul(S_omega, self.g)
+        g_dot = g_dot.astype(float)
+        
+        b_l_dot = np.zeros([3,1])
+        
+        omega_dot = self.b_w + np.matmul(np.matmul(self.B_2, self.G_inverse), a_mc)
+        omega_dot = omega_dot.astype(float)
+        
+        b_w_dot = np.zeros([3,1])
+        
+        self.b_l += b_l_dot*self.dt
+        self.b_w += b_w_dot*self.dt
+        self.g += g_dot*self.dt
+        self.p_nu += p_nu_dot*self.dt
+        self.v += v_dot*self.dt
+        self.omega += omega_dot*self.dt
+        
+        return self.p_nu, self.v, self.omega, v_dot, omega_dot
+        
     
 
 
@@ -151,26 +216,36 @@ dt = 1.0/params["runfrequency"]
 
 controller = AccFeedforwardController(dt)
 
-paramPath = os.path.dirname(os.getcwd())
-with open(r"{0}/csad_dp_ws/src/simulator/src/sensorParams.yaml".format(paramPath)) as file:
-    paramsImu = yaml.load(file, Loader=yaml.Loader)
+
         
 def loop():
-    eta_hat = observer.eta_hat
-    nu_hat = observer.nu_hat
-    bias_hat = observer.bias_hat
+    # eta_hat = observer.eta_hat
+    # eta_hat = np.resize(eta_hat, (3,1))
+    # nu_hat = observer.nu_hat
+    # nu_hat = np.resize(nu_hat, (3,1))
+    # bias_hat = observer.bias_hat
+    # bias_hat = np.resize(bias_hat, (3,1))
+    
+    
+    [eta, nu] = qualisys.getQualisysOdometry()
+    eta = np.resize(eta, (6,1))
+    nu = np.resize(nu, (6,1))
     
     measurement_imu1 = imu1.getImuMeasurement()
     measurement_imu2 = imu2.getImuMeasurement()
     measurement_imu3 = imu3.getImuMeasurement()
     measurement_imu4 = imu4.getImuMeasurement()
     
-    imu1_acc = measurement_imu1[0:3]
-    imu2_acc = measurement_imu2[0:3]
-    imu3_acc = measurement_imu3[0:3]
-    imu4_acc = measurement_imu4[0:3]
-    measurements_acc = np.concatenate((measurement_imu1[0:3], measurement_imu2[0:3], measurement_imu3[0:3], measurement_imu4[0:3]))
-
-    controlOutput = controller.getControlOutput(measurements_acc, paramsImu)
-    tau.publish(controlOutput)
+    thrustMeasured = thrust.getThrustLoads()
+    thrustMeasured = np.resize(thrustMeasured, (6,1))
+    # imu1_acc = measurement_imu1[0:3]
+    # imu2_acc = measurement_imu2[0:3]
+    # imu3_acc = measurement_imu3[0:3]
+    # imu4_acc = measurement_imu4[0:3]
+    a_mc = np.concatenate((measurement_imu1[0:3], measurement_imu2[0:3], measurement_imu3[0:3], measurement_imu4[0:3]))
+    # controlOutput = controller.getControlOutput(measurements_acc, paramsImu)
+    controlOutput = controller.getControlOutput(eta, nu, a_mc, thrustMeasured)
+    
+    tau.publish(controlOutput, controller.time)
+    controller.time += dt
     # rospy.spin()

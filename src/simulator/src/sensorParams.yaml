@@ -1,6 +1,6 @@
 imu_properties:
   standardDeviation: 0.1
-  mean: 0
+  mean: 0.0
 
 imu_locations:
   imu1:

@@ -7,20 +7,23 @@
         <param name="fixed_frame_id" value="simulator"/>
         <rosparam param="model_list">[]</rosparam>
     </node>
-    <node pkg="gain_server"
+    <!-- <node pkg="gain_server"
         type="server.py"
         name="gain_server">
-    </node>
+    </node> -->
     <node pkg="observer"
         type="observer_node.py"
-        name="Observer_node">
+        name="Observer_node"
+        output="screen">
     </node>
     <node pkg="controller"
         type="pidController_node.py"
-        name="pidController_node">
+        name="pidController_node"
+        output="screen">
     </node>
     <node pkg="thrust_allocation"
         type="allocation_node.py"
-        name="ThrustAllocation_node">
+        name="ThrustAllocation_node"
+        output="screen">
     </node>
 </launch>

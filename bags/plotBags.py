@@ -9,6 +9,8 @@ from rospy import Time
 import numpy as np
 from decimal import Decimal
 
+import rospy
+
 
 def quat2eul(w, x, y, z):
     """
@@ -40,7 +42,7 @@ def quat2eul(w, x, y, z):
 
 
 
-fileName = 'testbag.bag'
+fileName = 'accController_Hs006_Tp115.bag'
 pathName = "{0}/csad_dp_ws/bags/"+fileName
 
 path = os.path.dirname(os.getcwd())
@@ -97,6 +99,10 @@ imu3_z = []
 imu4_x = []
 imu4_y = []
 imu4_z = []
+timeImu1 = []
+timeImu2 = []
+timeImu3 = []
+timeImu4 = []
 
 tauX = []
 tauY = []
@@ -185,18 +191,26 @@ for topic, msg, t in bag.read_messages(topics={'/qualisys/Body_1/odom',
         imu1_x.append(msg.linear_acceleration.x)
         imu1_y.append(msg.linear_acceleration.y)
         imu1_z.append(msg.linear_acceleration.z)
+        T = rospy.Time(msg.header.stamp.secs, msg.header.stamp.nsecs)
+        timeImu1.append(T.to_sec()-initialTime)
     elif topic == '/imu2':
         imu2_x.append(msg.linear_acceleration.x)
         imu2_y.append(msg.linear_acceleration.y)
         imu2_z.append(msg.linear_acceleration.z)
+        T = rospy.Time(msg.header.stamp.secs, msg.header.stamp.nsecs)
+        timeImu2.append(T.to_sec()-initialTime)
     elif topic == '/imu3':
         imu3_x.append(msg.linear_acceleration.x)
         imu3_y.append(msg.linear_acceleration.y)
         imu3_z.append(msg.linear_acceleration.z)
+        T = rospy.Time(msg.header.stamp.secs, msg.header.stamp.nsecs)
+        timeImu3.append(T.to_sec()-initialTime)
     elif topic == '/imu4':
         imu4_x.append(msg.linear_acceleration.x)
         imu4_y.append(msg.linear_acceleration.y)
         imu4_z.append(msg.linear_acceleration.z)
+        T = rospy.Time(msg.header.stamp.secs, msg.header.stamp.nsecs)
+        timeImu4.append(T.to_sec()-initialTime)
     
     elif topic == '/CSAD/tau':
         tauX.append(msg.data[0])
@@ -241,9 +255,9 @@ ax0[0].set(ylabel='[m]')
 ax0[1].plot(time, y, label='y')
 ax0[1].grid()
 ax0[1].set(ylabel='[m]')
-ax0[2].plot(time, z, label='z')
+ax0[2].plot(time, z, label='yaw')
 ax0[2].grid()
-ax0[2].set(ylabel='[m]')
+ax0[2].set(ylabel='[rad]')
 ax0[2].set(xlabel='time [s]')
 for ax in ax0:
     ax.ticklabel_format(axis='y', style='scientific', scilimits=(0,0))
@@ -332,9 +346,9 @@ for ax in ax3[:,1]:
 
 """Plotting controller output"""
 fig, ax4 = plt.subplots(3,1)
-ax4[0].plot(timeTau, tauX, label="tau_thr X")
-ax4[0].plot(timeTau, tauY, label="tau_thr Y")
-ax4[0].plot(timeTau, tauN, label="tau_thr N")
+ax4[0].plot(timeTau[0:500], tauX[0:500], label="tau_thr X")
+ax4[0].plot(timeTau[0:500], tauY[0:500], label="tau_thr Y")
+ax4[0].plot(timeTau[0:500], tauN[0:500], label="tau_thr N")
 ax4[0].grid()
 # print(trueTauX)
 ax4[1].plot(timeU, u1, label="u1")
@@ -358,6 +372,47 @@ for ax in ax4:
     ax.legend(loc='upper right')
 
 
+fig5, ax5 = plt.subplots(3,1)
+ax5[0].plot(timeImu1[0:500], imu1_x[0:500])
+ax5[0].plot(timeImu2[0:500], imu2_x[0:500])
+ax5[0].plot(timeImu3[0:500], imu3_x[0:500])
+ax5[0].plot(timeImu4[0:500], imu4_x[0:500])
+ax5[1].plot(timeImu1[0:500], imu1_y[0:500])
+ax5[1].plot(timeImu2[0:500], imu2_y[0:500])
+ax5[1].plot(timeImu3[0:500], imu3_y[0:500])
+ax5[1].plot(timeImu4[0:500], imu4_y[0:500])
+ax5[2].plot(timeImu1[0:500], imu1_z[0:500])
+ax5[2].plot(timeImu2[0:500], imu2_z[0:500])
+ax5[2].plot(timeImu3[0:500], imu3_z[0:500])
+ax5[2].plot(timeImu4[0:500], imu4_z[0:500])
+
+
+# fig5, ax5 = plt.subplots(4,1)
+# n = len(timeImu1)
+# fhat = np.fft.fft(imu1_x, n)
+# PSD = fhat*np.conj(fhat)/n
+# F = (2*np.pi/(0.02*n))*np.arange(n)
+# L = np.arange(1,np.floor(n/2), dtype='int')
+# indice = PSD > 0.1
+# PSDclean = indice*PSD
+# ffilt = indice*fhat
+# rec = np.fft.ifft(ffilt)
+# ax5[2].plot(F[L], PSD[L])
+
+# ax5[0].plot(timeImu1, imu1_x)
+# ax5[0].plot(timeImu1, rec)
+
+# vel=[]
+# acc=[]
+
+# for i in range(1,len(x)):
+#     vel.append((x[i]-x[i-1])/0.02)
+# for i in range(1,len(vel)):
+#     acc.append((vel[i]-vel[i-1])/0.02)
+    
+# ax5[1].plot(time[0:-2], acc)
+# ax5[1].plot(time, x)
+# ax5[1].plot(timeImu1, rec)
 
 # fig4, ax4 = plt.subplots(3,1)
 # n = len(timeWave)

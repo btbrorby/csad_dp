@@ -46,6 +46,7 @@ if __name__ == '__main__':
         t1 = tic.time()
         tau_wave = seastate.getWaveLoads()
         tau_thr = thrusters.getThrustLoads()
+
         waveFrequency = seastate.frequency
         
         vessel.updateStates(tau_wave, tau_thr, waveFrequency)

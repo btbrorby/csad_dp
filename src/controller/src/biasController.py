@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import numpy as np
-from lib import odometry, observer, reference, ps4, u_data, gains, tau
+from lib import observer, reference, ps4, u_data, gains, tau
 from math_tools import Rzyx, rad2pipi
 from matplotlib import pyplot as plt
 import yaml
@@ -16,9 +16,7 @@ class BiasController:
         self.eta_d_dotdot = eta_d_dotdot
         self.dt = dt
         # self.Kp = np.diag([30.0, 30.0, 40.0])
-        self.Kp = 2.0*np.pi*2.0*np.pi*np.array([[1.8982, 0.0, 0.0],
-                                                [0.0, 197.0, 0.0],
-                                                [0.0, 0.0, 0.0]])
+        self.Kp = 2.0*np.pi*2.0*np.pi*np.diag([1.8982, 197.0, 0.0])
         # self.Kd = np.diag([10.3, 0.0, 0.0])
         self.Kd = np.diag([204.8, 0.0, 0.0])
         
