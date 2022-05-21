@@ -7,6 +7,8 @@ import yaml
 import matplotlib.pyplot as plt
 import time as tic
 
+t0 = tic.time()
+
 path = os.path.dirname(os.getcwd())
 with open(r"{0}/csad_dp_ws/src/observer/src/params.yaml".format(path)) as file:
     params = yaml.load(file, Loader=yaml.Loader)
@@ -16,11 +18,12 @@ with open(r"{0}/csad_dp_ws/src/observer/src/params.yaml".format(path)) as file:
 if __name__ == '__main__':
     observerNodeInit()
     r = rospy.Rate(params["runfrequency"]) # Usually set to 100 Hz
-    t0 = tic.time()
+    
+    print("OBSERVER time", tic.time()-t0)
     while not rospy.is_shutdown():
         
         loop()
         r.sleep()
-        print("OBSERVER time", tic.time()-t0)
+        
     
     nodeEnd()

@@ -216,6 +216,7 @@ class IMU():
         """Outputs the simulated measurement from one imu in sensor frame"""
         l = self.getImuLocation()
     
+        S_nu_dot = self.getS(self.nu_dot[3:6])
         S_nu = self.getS(self.nu[3:6])
         g_dot = -np.matmul(S_nu, self.g)
         g_dot = g_dot.astype(float)
@@ -225,7 +226,7 @@ class IMU():
         b = self.__getBias()
         w = self.__getMeasurementNoise()
         
-        a_l = self.nu_dot[0:3] + np.matmul(S_nu, l) + np.matmul(np.matmul(S_nu, S_nu), l)
+        a_l = self.nu_dot[0:3] + np.matmul(S_nu_dot, l) + np.matmul(np.matmul(S_nu, S_nu), l)
         a_l = a_l.astype(float)
         
         a_m = a_l + np.matmul(S_nu, self.nu[0:3]) + self.g + b[0:3] + w[0:3]

@@ -43,8 +43,9 @@ class AccFeedforwardController:
         self.B_2[0,3] = self.B_2[1,4] = self.B_2[2,5] = 1.0
         
         #Tuning gains:
-        self.Kp = 2.0*np.pi*2.0*np.pi*np.diag([1.8982, 197.0, 0.0])
-        self.Kd = np.diag([204.8, 0.0, 0.0])
+        self.Kp = 2.0*np.pi*2.0*np.pi*np.diag([1.8982, 1.0, 1.0])
+        # self.Kd = np.diag([10.3, 0.0, 0.0])
+        self.Kd = np.diag([204.8, 100.0, 100.0])
         self.mu = 0.0
         
         self.M = np.array([[140.0, 0.0, 0.0],
@@ -80,11 +81,11 @@ class AccFeedforwardController:
         ly = locations['y']
         lz = locations['z']
         
-        l = math.sqrt(lx**2 + ly**2 + lz**2)
-        #is this rigth?
-        S_l_transposed = np.array([[0.0, -l, 0.0],
-                                   [l, 0.0, 0.0],
-                                   [0.0, 0.0, 0.0]])
+        # l = math.sqrt(lx**2 + ly**2 + lz**2)
+        # #is this rigth?
+        # S_l_transposed = np.array([[0.0, -l, 0.0],
+        #                            [l, 0.0, 0.0],
+        #                            [0.0, 0.0, 0.0]])
         S = self.getS(np.array([lx, ly, lz]))
         S_l_transposed = np.transpose(S)
         
@@ -143,17 +144,20 @@ class AccFeedforwardController:
         nu_hat = np.array([v[0], v[1], omega[2]])
         nu_hat = np.resize(nu_hat, (3,1))
         nu_tilde =  nu_hat - np.matmul(R_transpose, self.eta_d_dot)
-        
+        S_r = self.getS(np.array([0.0, 0.0, omega[2]]))
         Gamma = - np.matmul(self.Kp, eta_body_tilde) - np.matmul(self.Kd, nu_tilde)
-        print("GAMMA", Gamma)
+        Gamma = Gamma.astype(float)
+        # Gamma = -np.matmul((np.matmul(self.Kd, self.Kp) - np.matmul(np.matmul(self.M, self.Kp), S_r)), eta_body_tilde) - np.matmul((self.Kd + np.matmul(self.M, self.Kp)), nu_tilde)
         tau0 = np.array([thrustMeasured[0], thrustMeasured[1], thrustMeasured[5]])
         tau0 = np.resize(tau0, (3,1))
         
-        delta_dot = self.mu*(np.matmul(self.M, a) - tau0 - Gamma + np.matmul(self.D, nu_hat))
+        delta_dot = self.mu*(np.matmul(self.M, a) - Gamma) # - self.delta + np.matmul(self.D, nu_hat))
+        delta_dot = delta_dot.astype(float)
         self.delta += delta_dot*self.dt
         
         self.tau = Gamma - self.delta
-        return self.tau
+        
+        return self.tau, a
     
     def getS(self, vec):
         p = vec[0]
@@ -167,13 +171,12 @@ class AccFeedforwardController:
     
     def stateObserver(self, a_mc, eta, nu):
         
-        b_w_dot = 0.0
-        b_l_dot = 0.0
-        
         R = Rzyx(eta[5])
         R_transposed = np.transpose(R)
+        
         p_nu = np.matmul(R_transposed, eta[0:3])
         p_nu = np.resize(p_nu, (3,1))
+        
         omega = nu[3:6]
         omega = np.resize(omega, (3,1))
         v = nu[0:3]
@@ -197,14 +200,15 @@ class AccFeedforwardController:
         
         b_w_dot = np.zeros([3,1])
         
-        self.b_l += b_l_dot*self.dt
-        self.b_w += b_w_dot*self.dt
-        self.g += g_dot*self.dt
-        self.p_nu += p_nu_dot*self.dt
-        self.v += v_dot*self.dt
-        self.omega += omega_dot*self.dt
+        # self.b_l += b_l_dot*self.dt
+        # self.b_w += b_w_dot*self.dt
+        # self.g += g_dot*self.dt
+        # self.p_nu += p_nu_dot*self.dt
+        # self.v += v_dot*self.dt
+        # self.omega += omega_dot*self.dt
         
-        return self.p_nu, self.v, self.omega, v_dot, omega_dot
+        
+        return p_nu, v, omega, v_dot, omega_dot
         
     
 
@@ -212,9 +216,9 @@ class AccFeedforwardController:
 path = os.path.dirname(os.getcwd())
 with open(r"{0}/csad_dp_ws/src/controller/src/params.yaml".format(path)) as file:
     params = yaml.load(file, Loader=yaml.Loader)
-dt = 1.0/params["runfrequency"]
+timestep = 1.0/params["runfrequency"]
 
-controller = AccFeedforwardController(dt)
+controller = AccFeedforwardController(dt = timestep)
 
 
         
@@ -236,16 +240,19 @@ def loop():
     measurement_imu3 = imu3.getImuMeasurement()
     measurement_imu4 = imu4.getImuMeasurement()
     
-    thrustMeasured = thrust.getThrustLoads()
-    thrustMeasured = np.resize(thrustMeasured, (6,1))
+    # thrustMeasured = thrust.getThrustLoads()
+    # thrustMeasured = np.resize(thrustMeasured, (6,1))
+    thrustMeasured = np.zeros([6,1])
+    
     # imu1_acc = measurement_imu1[0:3]
     # imu2_acc = measurement_imu2[0:3]
     # imu3_acc = measurement_imu3[0:3]
     # imu4_acc = measurement_imu4[0:3]
     a_mc = np.concatenate((measurement_imu1[0:3], measurement_imu2[0:3], measurement_imu3[0:3], measurement_imu4[0:3]))
     # controlOutput = controller.getControlOutput(measurements_acc, paramsImu)
-    controlOutput = controller.getControlOutput(eta, nu, a_mc, thrustMeasured)
+    [controlOutput, a] = controller.getControlOutput(eta, nu, a_mc, thrustMeasured)
     
     tau.publish(controlOutput, controller.time)
-    controller.time += dt
+    # tau.publish(a, controller.time)
+    controller.time += timestep
     # rospy.spin()

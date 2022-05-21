@@ -42,7 +42,7 @@ def quat2eul(w, x, y, z):
 
 
 
-fileName = 'accController_Hs006_Tp115.bag'
+fileName = 'addController_Hs006_Tp115.bag'
 pathName = "{0}/csad_dp_ws/bags/"+fileName
 
 path = os.path.dirname(os.getcwd())
@@ -127,6 +127,11 @@ alpha5 = []
 alpha6 = []
 timeU = []
 
+controlHelper1 = []
+controlHelper2 = []
+controlHelper3 = []
+timeHelper = []
+
 
 i = 0
 initialTime = bag.get_start_time()
@@ -141,7 +146,8 @@ for topic, msg, t in bag.read_messages(topics={'/qualisys/Body_1/odom',
                                                '/imu4',
                                                '/CSAD/tau',
                                                '/CSAD/u',
-                                               '/CSAD/trueThrustLoads'}):
+                                               '/CSAD/trueThrustLoads',
+                                               '/helper'}):
     
     if topic == '/qualisys/Body_1/odom':
         T = Time(t.secs, t.nsecs)
@@ -241,6 +247,12 @@ for topic, msg, t in bag.read_messages(topics={'/qualisys/Body_1/odom',
         trueTauX.append(msg.data[0])
         trueTauY.append(msg.data[1])
         trueTauN.append(msg.data[2])
+        
+    elif topic == '/helper':
+        controlHelper1.append(msg.data[0])
+        controlHelper2.append(msg.data[1])
+        controlHelper3.append(msg.data[2])
+        timeHelper.append(msg.data[-1])
         
 
     
@@ -346,9 +358,9 @@ for ax in ax3[:,1]:
 
 """Plotting controller output"""
 fig, ax4 = plt.subplots(3,1)
-ax4[0].plot(timeTau[0:500], tauX[0:500], label="tau_thr X")
-ax4[0].plot(timeTau[0:500], tauY[0:500], label="tau_thr Y")
-ax4[0].plot(timeTau[0:500], tauN[0:500], label="tau_thr N")
+ax4[0].plot(timeTau, tauX, label="tau_thr X")
+ax4[0].plot(timeTau, tauY, label="tau_thr Y")
+ax4[0].plot(timeTau, tauN, label="tau_thr N")
 ax4[0].grid()
 # print(trueTauX)
 ax4[1].plot(timeU, u1, label="u1")
@@ -372,69 +384,34 @@ for ax in ax4:
     ax.legend(loc='upper right')
 
 
-fig5, ax5 = plt.subplots(3,1)
-ax5[0].plot(timeImu1[0:500], imu1_x[0:500])
-ax5[0].plot(timeImu2[0:500], imu2_x[0:500])
-ax5[0].plot(timeImu3[0:500], imu3_x[0:500])
-ax5[0].plot(timeImu4[0:500], imu4_x[0:500])
-ax5[1].plot(timeImu1[0:500], imu1_y[0:500])
-ax5[1].plot(timeImu2[0:500], imu2_y[0:500])
-ax5[1].plot(timeImu3[0:500], imu3_y[0:500])
-ax5[1].plot(timeImu4[0:500], imu4_y[0:500])
-ax5[2].plot(timeImu1[0:500], imu1_z[0:500])
-ax5[2].plot(timeImu2[0:500], imu2_z[0:500])
-ax5[2].plot(timeImu3[0:500], imu3_z[0:500])
-ax5[2].plot(timeImu4[0:500], imu4_z[0:500])
-
-
-# fig5, ax5 = plt.subplots(4,1)
-# n = len(timeImu1)
-# fhat = np.fft.fft(imu1_x, n)
-# PSD = fhat*np.conj(fhat)/n
-# F = (2*np.pi/(0.02*n))*np.arange(n)
-# L = np.arange(1,np.floor(n/2), dtype='int')
-# indice = PSD > 0.1
-# PSDclean = indice*PSD
-# ffilt = indice*fhat
-# rec = np.fft.ifft(ffilt)
-# ax5[2].plot(F[L], PSD[L])
-
+# fig5, ax5 = plt.subplots(3,1)
 # ax5[0].plot(timeImu1, imu1_x)
-# ax5[0].plot(timeImu1, rec)
+# ax5[0].plot(timeImu2, imu2_x)
+# ax5[0].plot(timeImu3, imu3_x)
+# ax5[0].plot(timeImu4, imu4_x)
+# ax5[0].grid()
+# ax5[0].plot(np.add(timeTau, timeImu1[0]-timeTau[0]), tauX)
 
-# vel=[]
-# acc=[]
+# ax5[1].plot(timeImu1, imu1_y)
+# ax5[1].plot(timeImu2, imu2_y)
+# ax5[1].plot(timeImu3, imu3_y)
+# ax5[1].plot(timeImu4, imu4_y)
+# ax5[1].grid()
+# ax5[1].plot(np.add(timeTau,timeImu1[0]), tauY)
 
-# for i in range(1,len(x)):
-#     vel.append((x[i]-x[i-1])/0.02)
-# for i in range(1,len(vel)):
-#     acc.append((vel[i]-vel[i-1])/0.02)
-    
-# ax5[1].plot(time[0:-2], acc)
-# ax5[1].plot(time, x)
-# ax5[1].plot(timeImu1, rec)
+# ax5[2].plot(timeImu1, imu1_z)
+# ax5[2].plot(timeImu2, imu2_z)
+# ax5[2].plot(timeImu3, imu3_z)
+# ax5[2].plot(timeImu4, imu4_z)
+# ax5[2].grid()
 
-# fig4, ax4 = plt.subplots(3,1)
-# n = len(timeWave)
-# fhat = np.fft.fft(waveLoadX, n)
-# PSD = fhat*np.conj(fhat)/n
-# F = (2*np.pi/(0.02*n))*np.arange(n)
-# L = np.arange(1,np.floor(n/2), dtype='int')
-# ax4[0].plot(F[L], fhat[L])
-# print(type(waveLoadX), np.shape(waveLoadX))
-# filteredLoad = 1.0/(np.divide(waveLoadX,2.0) + 1.0)
+fig6, ax6 = plt.subplots(3,1)
+ax6[0].plot(timeHelper, controlHelper1)
+ax6[1].plot(timeHelper, controlHelper2)
+ax6[2].plot(timeHelper, controlHelper3)
 
-# ax4[1].plot(timeWave, waveLoadX)
 
-# y = waveLoadX
-# T = 0.02
-# cutoff = 7.5
-# alpha = (2.0-T*cutoff)/(2.0+T*cutoff)
-# beta = T*cutoff/(2.0+T*cutoff)
-# for i in range(1, len(waveLoadX)):
-#     y[i] = alpha*y[i-1] + beta*(waveLoadX[i] + waveLoadX[i-1])
-    
-# ax4[1].plot(timeWave, y)
+
 
 
 

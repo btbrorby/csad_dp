@@ -10,6 +10,8 @@ from ThrusterDynamics import ThrusterDynamics
 from std_msgs.msg import Float64MultiArray
 import time as tic
 
+t0 = tic.time()
+
 path = os.path.dirname(os.getcwd())
 with open(r"{0}/csad_dp_ws/src/simulator/src/params.yaml".format(path)) as file:
     params = yaml.load(file, Loader=yaml.Loader)
@@ -41,12 +43,13 @@ if __name__ == '__main__':
     node = rospy.init_node("Simulator_node")
     rospy.Subscriber("/CSAD/u", Float64MultiArray, thrusters.updateU)
     r = rospy.Rate(params["runfrequency"]) # Usually set to 100 Hz
-    t0 = tic.time()
+    rospy.sleep(0.13)
+    print("SIMULATION time:", tic.time()-t0)
     while not rospy.is_shutdown():
         t1 = tic.time()
         tau_wave = seastate.getWaveLoads()
         tau_thr = thrusters.getThrustLoads()
-
+        # tau_thr = np.zeros([6,1])
         waveFrequency = seastate.frequency
         
         vessel.updateStates(tau_wave, tau_thr, waveFrequency)
@@ -61,6 +64,7 @@ if __name__ == '__main__':
         vessel.publish()
         thrusters.publish(tau_thr)
         seastate.publish(tauWave=tau_wave)
+        
         imu1.publish()
         imu2.publish()
         imu3.publish()
@@ -69,7 +73,7 @@ if __name__ == '__main__':
         
         r.sleep()
         # rospy.spin()
-        print("SIMULATION time:", tic.time()-t0)
+        
         # print("Time step:", tic.time()-t1)
 
     

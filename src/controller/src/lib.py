@@ -6,7 +6,7 @@ from math_tools import quat2eul
 import numpy as np
 import dynamic_reconfigure.client
 from std_msgs.msg import Float64MultiArray
-from messages.msg import observer_message, reference_message
+from messages.msg import observer_message, reference_message, wave_message
 class Controller():
     """
     The controller listens to the /joy topic and maps all input signals from the DS4 to a variable that can be called
@@ -195,6 +195,7 @@ class Tau():
     def __init__(self):
         self.tau_msg = Float64MultiArray()
         self.pub = rospy.Publisher("/CSAD/tau", Float64MultiArray, queue_size=1)
+        self.pub_helper = rospy.Publisher("/helper", Float64MultiArray, queue_size=1)
         self.tau = np.zeros([3,1])
         self.mode = False
         self.time = 0.0
@@ -208,6 +209,13 @@ class Tau():
         msg = np.concatenate((tau, np.array([[time]])), axis=0)
         self.tau_msg.data = msg
         self.pub.publish(self.tau_msg)
+    
+    def publishHelper(self, data, time):
+        msg = Float64MultiArray()
+        dataWithTime = np.concatenate((data, np.array([[time]])), axis=0)
+        msg.data = dataWithTime
+        self.pub_helper.publish(msg)
+        
         
     
     def getTau(self):
@@ -238,7 +246,25 @@ class IMU():
     def getImuMeasurement(self):
         return self.imu
         
+class WaveMeasurement():
+    def __init__(self):
+        self.elevation = 0.0
+        self.measurement_distance = 0.0
+        self.Tp = 0.0
+        self.Hs = 0.0
+        # self.phase = 0.0
+        # self.amplitude = 0.0
     
+    def callback(self, msg = wave_message()):
+        self.elevation = msg.elevation
+        self.measurement_distance = msg.distance
+        self.Tp = msg.Tp
+        self.Hs = msg.Hs
+        
+    def getMeasurement(self):
+        return self.elevation
+        
+        
 
 
 # Build the objects to be imported
@@ -254,6 +280,7 @@ imu1 = IMU(1)
 imu2 = IMU(2)
 imu3 = IMU(3)
 imu4 = IMU(4)
+waveMeasurement = WaveMeasurement()
 
 
 # Initialize controller node
@@ -268,8 +295,9 @@ def controllNodeInit():
     rospy.Subscriber("/imu2", Imu, imu2.callback)
     rospy.Subscriber("/imu3", Imu, imu3.callback)
     rospy.Subscriber("/imu4", Imu, imu4.callback)
+    rospy.Subscriber("/waveElevation", wave_message, waveMeasurement.callback)
     
-    rospy.Subscriber("/CSAD/trueThrustLoads", Float64MultiArray, thrust.callback)
+    # rospy.Subscriber("/CSAD/trueThrustLoads", Float64MultiArray, thrust.callback)
     
     # gain_client = dynamic_reconfigure.client.Client('gain_server', timeout=30, config_callback = gains.callback)
     

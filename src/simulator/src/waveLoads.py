@@ -27,7 +27,7 @@ with open(r"{0}/csad_dp_ws/src/simulator/include/seastateDefinitions.yaml".forma
     states = yaml.load(file, Loader=yaml.Loader)
 
 class Wave():
-    def __init__(self, Hs, Tp, stateDescription='calm', waterDepth=np.infty, angle=0.0, N = 20, regular=True, dt=0.02):
+    def __init__(self, Hs, Tp, stateDescription='calm', waterDepth=np.infty, angle=0.0, N = 15, regular=True, dt=0.02):
         """
         StateDescription defines realistic sea states where the valid area for Hs and Tp is defined.
         Can choose between 'calm', 'smooth', 'slight', 'moderate', 'rough', 'very_rough', 'high', 'very_high' or 'phenomenal'.
@@ -100,57 +100,6 @@ class Wave():
         
         self.pub_waveLoads = rospy.Publisher('/waveLoads', Float64MultiArray, queue_size=1) #Not used inside control system, only for plotting.
         self.pub_waveMeasurement = rospy.Publisher('/waveElevation', wave_message, queue_size=1)
-        
-    def separatePlusMinusCoefficients(self, frequencies):
-        xMinus = np.array([])
-        xPluss = np.array([])
-        yMinus = np.array([])
-        yPluss = np.array([])
-        psiMinus = np.array([])
-        psiPluss = np.array([])
-        headingIndex = np.argmin(np.abs(data.headingsData - self.angleWaveBody))
-        countX = 0
-        countY = 0
-        countPsi = 0
-        for w in frequencies:
-            frequencyIndex = np.argmin(np.abs(data.frequencies - w))
-            
-            driftCoefficient = np.array([data.driftForceAmpX[frequencyIndex, headingIndex],
-                                        data.driftForceAmpY[frequencyIndex, headingIndex],
-                                        data.driftForceAmpPsi[frequencyIndex, headingIndex]])
-            if driftCoefficient[0] < 0.0:
-                xMinus = np.resize(xMinus, (len(xMinus)+1, 2))
-                xMinus[-1,0] = countX
-                xMinus[-1,1] = driftCoefficient[0]
-                countX += 1
-            else:
-                xPluss = np.resize(xMinus, (len(xMinus)+1, 2))
-                xPluss[-1,0] = countX
-                xPluss[-1,1] = driftCoefficient[0]
-                countX += 1
-            if driftCoefficient[1] < 0.0:
-                yMinus = np.resize(yMinus, (len(yMinus)+1, 2))
-                yMinus[-1,0] = countY
-                yMinus[-1,1] = driftCoefficient[1]
-                countY += 1
-            else:
-                yPluss = np.resize(yPluss, (len(yPluss)+1, 2))
-                yPluss[-1,0] = countY
-                yPluss[-1,1] = driftCoefficient[1]
-                countY += 1
-            if driftCoefficient[2] < 0.0:
-                psiMinus = np.resize(psiMinus, (len(psiMinus)+1, 2))
-                psiMinus[-1,0] = countPsi
-                psiMinus[-1,1] = driftCoefficient[2]
-                countPsi += 1
-            else:
-                psiPluss = np.resize(psiPluss, (len(psiPluss)+1, 2))
-                psiPluss[-1,0] = countPsi
-                psiPluss[-1,1] = driftCoefficient[2]
-                countPsi += 1
-        return xMinus, xPluss, yMinus, yPluss, psiMinus, psiPluss
-            
-                
             
         
     def publish(self, tauWave=np.zeros([6,1])):
