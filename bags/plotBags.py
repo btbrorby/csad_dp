@@ -42,7 +42,7 @@ def quat2eul(w, x, y, z):
 
 
 
-fileName = 'addController_Hs006_Tp115.bag'
+fileName = 'testbag.bag'
 pathName = "{0}/csad_dp_ws/bags/"+fileName
 
 path = os.path.dirname(os.getcwd())

@@ -8,8 +8,8 @@ file_name_ABC = "include/CSAD_modelABC.mat"
 file_name = "include/CSAD_model.mat"
 
 path = os.path.dirname(os.getcwd())
-vessel = loadmat(r"{0}/csad_dp_ws/src/simulator/include/CSAD_model.mat".format(path))['vessel']             # Loads MSS vessel structure
-vesselABC = loadmat(r"{0}/csad_dp_ws/src/simulator/include/CSAD_modelABC.mat".format(path))['vesselABC']    # Loads fluid memmory state-space model
+vessel = loadmat(r"{0}/csad_dp_ws/src/controller/include/CSAD_model.mat".format(path))['vessel']             # Loads MSS vessel structure
+vesselABC = loadmat(r"{0}/csad_dp_ws/src/controller/include/CSAD_modelABC.mat".format(path))['vesselABC']    # Loads fluid memmory state-space model
 
 name = vessel['main']['name']       # Name of ship
 Lpp = vessel['main']['Lpp']         # Length between perpendiculars

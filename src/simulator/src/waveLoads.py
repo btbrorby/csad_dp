@@ -372,10 +372,10 @@ class Wave():
             elementPhase[count] = 2.0*pi*np.random.rand()
             count += 1
         
-        # fig = plt.figure()
-        # plt.plot(elementFrequencies, spectrums)
-        # plt.plot(elementFrequencies[int(0.2*self.N):int(0.7*self.N)], spectrums[int(0.2*self.N):int(0.7*self.N)])
-        # plt.show()
+        fig = plt.figure()
+        plt.plot(elementFrequencies, spectrums)
+        plt.plot(elementFrequencies[int(0.2*self.N):int(0.7*self.N)], spectrums[int(0.2*self.N):int(0.7*self.N)])
+        plt.show()
         # elementAmplitude = np.array(elementAmplitude).astype(float)
         # elementFrequencies = np.array(elementFrequencies).astype(float)
         # elementPhase = np.array(elementPhase).astype(float)
@@ -407,7 +407,7 @@ class Wave():
 
 
 # #Uncomment for testing and debugging:
-# seastate = Wave(0.06, 1.15, stateDescription='very_rough', regular=True)
+# seastate = Wave(0.06, 1.15, stateDescription='very_rough', regular=False)
 # seastate.updateHeading(0.0)
 # t = 0.0
 # time = []

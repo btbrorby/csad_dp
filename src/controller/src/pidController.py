@@ -53,7 +53,7 @@ class PID:
         self.eta_d = eta_d
         self.eta_d_dot = eta_d_dot
         self.eta_d_dotdot = eta_d_dotdot
-        self.z = 0.0
+        self.z = np.zeros([3,1])
         self.dt = dt
         self.Kp = 2.0*np.pi*2.0*np.pi*np.diag([1.8982, 197.0, 0.0])
         self.Ki = np.diag([25.0, 0.0, 0.0])
