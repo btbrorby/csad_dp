@@ -33,7 +33,7 @@ class SpectrumController:
         
         #Tuning parameters:
         self.N = 10 #not in use
-        self.spectrumStep = 500
+        self.spectrumStep = 300
         self.gamma = 0.5
         self.Kp = 2.0*np.pi*2.0*np.pi*np.diag([1.8982, 197.0, 0.0])
         self.Ki = np.diag([25.0, 0.0, 0.0])
@@ -46,9 +46,9 @@ class SpectrumController:
         self.waveMeasurements.append(measurement)
 
     def updateSpectrum(self):
-        savedMeasurements = self.waveMeasurements[:]
+        savedMeasurements = np.array(self.waveMeasurements[:])
         
-        f, currentSpectrum = signal.welch(savedMeasurements, 1.0/self.dt)
+        f, currentSpectrum = signal.welch(savedMeasurements)
         f *= 2.0*np.pi
         print(np.shape(f), np.shape(currentSpectrum))
         #Finding the relevant indecies that we have data for:
@@ -136,7 +136,7 @@ def loop():
     if (mod == 0.0) and (controller.isUpdated == False):
         [f, spec] = controller.updateSpectrum()
         
-        plt.plot(f, spec)
+        plt.plot(f, np.abs(spec))
         
         plt.show()
         

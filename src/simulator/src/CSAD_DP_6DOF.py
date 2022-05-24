@@ -15,7 +15,6 @@ import os
 import yaml
 
 
-
 class CSAD:
     
     
@@ -129,7 +128,7 @@ class CSAD:
         self.bias_dot = np.matmul(-np.linalg.inv(self.T_b), self.bias)# + noise
         self.bias_dot = self.bias_dot.astype(float)
         
-        self.nu_dot = np.matmul(Minv, np.matmul(-B, self.nu) + np.matmul(-C, self.eta) + np.matmul(Jinv, self.bias) + tauEnv + tauThr)
+        self.nu_dot = np.matmul(Minv, np.matmul(-B, self.nu) + np.matmul(-C, np.matmul(Jinv, self.eta)) + np.matmul(Jinv, self.bias) + tauEnv + tauThr)
         self.nu_dot = self.nu_dot.astype(float)
         
         # Euler integration:

@@ -94,7 +94,7 @@ class Wave():
         
         [self.elementAmplitude, self.elementFrequencies, self.elementPhase] = self.generateIrregular()
         # [self.xMinus, self.xPluss, self.yMinus, self.yPluss, self.psiMinus, self.psiPluss] = self.separatePlusMinusCoefficients(self.elementFrequencies)
-        self.omega_c = self.frequency*1.5
+        self.omega_c = self.frequency*1.1
         self.slowlyVaryingLoads_previous = np.zeros([6,1])
         self.slowlyVaryingLoads_previous_filtered = np.zeros([6,1])
         
@@ -258,8 +258,8 @@ class Wave():
         slowlyVaryingLoads = math_tools.three2sixDof(slowlyVaryingLoads)
         slowlyVaryingLoads = np.resize(slowlyVaryingLoads, (6,1))
         slowlyVaryingLoads_filtered = math_tools.firstOrderLowPass(slowlyVaryingLoads, self.slowlyVaryingLoads_previous, self.slowlyVaryingLoads_previous_filtered, self.omega_c, self.dt)
-        self.slowlyVaryingLoads_previous = slowlyVaryingLoads
-        self.slowlyVaryingLoads_previous_filtered = slowlyVaryingLoads_filtered
+        self.slowlyVaryingLoads_previous = slowlyVaryingLoads.copy()
+        self.slowlyVaryingLoads_previous_filtered = slowlyVaryingLoads_filtered.copy()
         return slowlyVaryingLoads_filtered
         
     def getWaveLoads(self):
@@ -369,14 +369,14 @@ class Wave():
             spectrum = self.defineSpectrum(w)
             spectrums[count] = spectrum
             elementAmplitude[count] = math_tools.sqrt(2.0*spectrum*self.dw) #contains all wave amplitudes
-            elementPhase[count] = 2.0*pi*np.random.rand()
+            elementPhase[count] = 2.0*np.pi*np.random.rand()
             count += 1
         
-        fig = plt.figure()
-        plt.plot(elementFrequencies, spectrums)
-        plt.plot(elementFrequencies[int(0.2*self.N):int(0.7*self.N)], spectrums[int(0.2*self.N):int(0.7*self.N)])
-        plt.show()
-        # elementAmplitude = np.array(elementAmplitude).astype(float)
+        # fig = plt.figure()
+        # plt.plot(elementFrequencies, spectrums)
+        # plt.plot(elementFrequencies[int(0.2*self.N):int(0.7*self.N)], spectrums[int(0.2*self.N):int(0.7*self.N)])
+        # plt.show()
+        # # elementAmplitude = np.array(elementAmplitude).astype(float)
         # elementFrequencies = np.array(elementFrequencies).astype(float)
         # elementPhase = np.array(elementPhase).astype(float)
         # elementFrequencies = elementFrequencies.astype(float)
@@ -396,10 +396,10 @@ class Wave():
         else:
             amplitudes = self.elementAmplitude
             frequencies = self.elementFrequencies
-            phases = 2.0*np.pi*np.random.normal(len(self.elementPhase))
+            # phases = 2.0*np.pi*np.random.normal(len(self.elementPhase))
             frequencies += np.random.normal(loc=0.0,scale=self.dw/2.0, size=len(frequencies))
             k = np.power(frequencies, 2.0)/data.g
-            elevation = np.sum(amplitudes*np.cos(frequencies*time - k*x + phases))
+            elevation = np.sum(amplitudes*np.cos(frequencies*time - k*x + self.elementPhase))
         return elevation
         
     

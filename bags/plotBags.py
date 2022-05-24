@@ -7,6 +7,7 @@ from tables import Float32Col
 import rosbag
 from rospy import Time
 import numpy as np
+from scipy import signal
 from decimal import Decimal
 
 import rospy
@@ -334,9 +335,9 @@ for ax in ax2[:,1]:
 """Plotting wave elevation"""
 fig3, ax3 = plt.subplots(2,2)
 fig3.suptitle(title)
-# ax3[0,0].plot(timeWave[0:-1], waveElevation, label="Wave elevation")
-# ax3[0,0].set(ylabel='[m]')
-# ax3[0,0].grid()
+ax3[0,0].plot(timeWave[0:], waveElevation[0:], label="Wave elevation")
+ax3[0,0].set(ylabel='[m]')
+ax3[0,0].grid()
 ax3[1,0].plot(timeWave, waveLoadX, label="Wave load X")
 ax3[1,0].set(ylabel='[N]')
 ax3[1,0].grid()
@@ -384,26 +385,36 @@ for ax in ax4:
     ax.legend(loc='upper right')
 
 
-# fig5, ax5 = plt.subplots(3,1)
-# ax5[0].plot(timeImu1, imu1_x)
-# ax5[0].plot(timeImu2, imu2_x)
-# ax5[0].plot(timeImu3, imu3_x)
-# ax5[0].plot(timeImu4, imu4_x)
-# ax5[0].grid()
-# ax5[0].plot(np.add(timeTau, timeImu1[0]-timeTau[0]), tauX)
+[f, sp] = signal.welch(waveElevation, fs=(timeWave[0]-timeWave[-1]/len(timeWave)))
+# f = np.fft.rfftfreq(len(waveElevation), d=(timeWave[0]-timeWave[-1]/len(timeWave)))
+print(type(sp[0]))
+print(type(f[0]))
+fig, ax = plt.subplots(2,1)
+ax[0].plot(f, np.abs(sp))
 
-# ax5[1].plot(timeImu1, imu1_y)
-# ax5[1].plot(timeImu2, imu2_y)
-# ax5[1].plot(timeImu3, imu3_y)
-# ax5[1].plot(timeImu4, imu4_y)
-# ax5[1].grid()
-# ax5[1].plot(np.add(timeTau,timeImu1[0]), tauY)
+[f, sp] = signal.welch(waveLoadX, fs=(timeWave[0]-timeWave[-1]/len(timeWave)))
+ax[1].plot(f, np.abs(sp))
 
-# ax5[2].plot(timeImu1, imu1_z)
-# ax5[2].plot(timeImu2, imu2_z)
-# ax5[2].plot(timeImu3, imu3_z)
-# ax5[2].plot(timeImu4, imu4_z)
-# ax5[2].grid()
+fig5, ax5 = plt.subplots(3,1)
+ax5[0].plot(timeImu1, imu1_x)
+ax5[0].plot(timeImu2, imu2_x)
+ax5[0].plot(timeImu3, imu3_x)
+ax5[0].plot(timeImu4, imu4_x)
+ax5[0].grid()
+ax5[0].plot(np.add(timeTau, timeImu1[0]-timeTau[0]), tauX)
+
+ax5[1].plot(timeImu1, imu1_y)
+ax5[1].plot(timeImu2, imu2_y)
+ax5[1].plot(timeImu3, imu3_y)
+ax5[1].plot(timeImu4, imu4_y)
+ax5[1].grid()
+ax5[1].plot(np.add(timeTau,timeImu1[0]), tauY)
+
+ax5[2].plot(timeImu1, imu1_z)
+ax5[2].plot(timeImu2, imu2_z)
+ax5[2].plot(timeImu3, imu3_z)
+ax5[2].plot(timeImu4, imu4_z)
+ax5[2].grid()
 
 fig6, ax6 = plt.subplots(3,1)
 ax6[0].plot(timeHelper, controlHelper1)
