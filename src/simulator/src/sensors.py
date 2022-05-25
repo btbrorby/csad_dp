@@ -192,14 +192,14 @@ class IMU():
         
     def __getBias(self):
         """Bias term"""
-        self.noiseBias = np.random.normal(self.mean, self.std, 6)
+        self.noiseBias = 0.01*np.random.normal(self.mean, self.std, 6)
         self.noiseBias = np.resize(self.noiseBias, (6,1))
         self.bias_dot = self.noiseBias
         self.bias += self.bias_dot*self.dt
         return self.bias
     
     def __getMeasurementNoise(self):
-        w = np.random.normal(self.mean, self.std, 6)
+        w = 0.01*np.random.normal(self.mean, self.std, 6)
         w = np.resize(w, (6,1))
         return w
     

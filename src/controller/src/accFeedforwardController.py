@@ -253,6 +253,7 @@ def loop():
     [controlOutput, a] = controller.getControlOutput(eta, nu, a_mc, thrustMeasured)
     
     tau.publish(controlOutput, controller.time)
+    tau.publishHelper(a, controller.time)
     # tau.publish(a, controller.time)
     controller.time += timestep
     # rospy.spin()

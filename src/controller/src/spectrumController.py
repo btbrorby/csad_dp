@@ -48,7 +48,7 @@ class SpectrumController:
     def updateSpectrum(self):
         savedMeasurements = np.array(self.waveMeasurements[:])
         
-        f, currentSpectrum = signal.welch(savedMeasurements)
+        f, currentSpectrum = signal.welch(savedMeasurements, (1.0/self.dt)/2.0)
         f *= 2.0*np.pi
         print(np.shape(f), np.shape(currentSpectrum))
         #Finding the relevant indecies that we have data for:
