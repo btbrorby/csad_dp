@@ -1,4 +1,10 @@
 <launch>
+    <arg name="bags_directory" value="/home/btbrorby/csad_dp_ws/bags"/>
+    <node pkg="rosbag"
+        type="record"
+        name="recordBag"
+        args="record -O $(arg bags_directory)/accController --duration=1100 -a">
+    </node>
     <node pkg="simulator"
         type="simulator_node.py"
         name="simulator_node"

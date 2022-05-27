@@ -74,7 +74,7 @@ if __name__ == '__main__':
         r.sleep()
         # rospy.spin()
         
-        # print("Time step:", tic.time()-t1)
+        print("Time step:", tic.time()-t0)
 
     
     node.destroy_node()

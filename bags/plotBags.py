@@ -2,14 +2,16 @@
 from pickletools import float8
 from time import sleep
 from matplotlib import pyplot as plt
+from matplotlib.ticker import FormatStrFormatter
 import os
+from numpy import argmin
 from tables import Float32Col
 import rosbag
 from rospy import Time
 import numpy as np
 from scipy import signal
 from decimal import Decimal
-from costFunction import costFunctionEta
+from costFunction import costFunctionEta, costFunctionTau, normalizeCost
 
 import rospy
 
@@ -44,8 +46,8 @@ def quat2eul(w, x, y, z):
 
 
 
-fileName = 'testbag.bag'
-pathName = "{0}/csad_dp_ws/bags/"+fileName
+
+
 def readBags(pathName):
     path = os.path.dirname(os.getcwd())
     path = pathName.format(path)
@@ -263,12 +265,91 @@ def readBags(pathName):
                 controlHelper5.append(msg.data[4])
                 controlHelper6.append(msg.data[5])
             timeHelper.append(msg.data[-1])
+    bag.close()
     return title, time, x, y, z, roll, pitch, yaw, x_dot, y_dot, z_dot, roll_dot, pitch_dot, yaw_dot, biasX, biasY, biasYaw, time_hat, x_hat, y_hat, yaw_hat, x_dot_hat, y_dot_hat, yaw_dot_hat, bias_x_hat, bias_y_hat, bias_yaw_hat, waveElevation, waveLoadX, waveLoadY, waveLoadN, timeWave, imu1_x, imu1_y, imu1_z, imu2_x, imu2_y, imu2_z, imu3_x, imu3_y, imu3_z, imu4_x, imu4_y, imu4_z, timeImu1, timeImu2, timeImu3, timeImu4, tauX, tauY, tauN, timeTau, trueTauX, trueTauY, trueTauN, u1, u2, u3, u4, u5, u6, alpha1, alpha2, alpha3, alpha4, alpha5, alpha6, timeU, controlHelper1, controlHelper2, controlHelper3, controlHelper4, controlHelper5, controlHelper6, timeHelper
-    
-[title, time, x, y, z, roll, pitch, yaw, x_dot, y_dot, z_dot, roll_dot, pitch_dot, yaw_dot, biasX, biasY, biasYaw, time_hat, x_hat, y_hat, yaw_hat, x_dot_hat, y_dot_hat, yaw_dot_hat, bias_x_hat, bias_y_hat, bias_yaw_hat, waveElevation, waveLoadX, waveLoadY, waveLoadN, timeWave, imu1_x, imu1_y, imu1_z, imu2_x, imu2_y, imu2_z, imu3_x, imu3_y, imu3_z, imu4_x, imu4_y, imu4_z, timeImu1, timeImu2, timeImu3, timeImu4, tauX, tauY, tauN, timeTau, trueTauX, trueTauY, trueTauN, u1, u2, u3, u4, u5, u6, alpha1, alpha2, alpha3, alpha4, alpha5, alpha6, timeU, controlHelper1, controlHelper2, controlHelper3, controlHelper4, controlHelper5, controlHelper6, timeHelper] = readBags(pathName)
-    
-costFunctionEta(time, etaX=x, etaY=y, etaYaw=yaw)
 
+axEta = np.array([])
+axTau = np.array([])
+Jeta_array = np.array([])
+Jtauuv_array = np.array([])
+Jtaur_array = np.array([])
+fileName = 'testBag.bag'
+pathName = "{0}/csad_dp_ws/bags/"+fileName 
+[title, time, x, y, z, roll, pitch, yaw, x_dot, y_dot, z_dot, roll_dot, pitch_dot, yaw_dot, biasX, biasY, biasYaw, time_hat, x_hat, y_hat, yaw_hat, x_dot_hat, y_dot_hat, yaw_dot_hat, bias_x_hat, bias_y_hat, bias_yaw_hat, waveElevation, waveLoadX, waveLoadY, waveLoadN, timeWave, imu1_x, imu1_y, imu1_z, imu2_x, imu2_y, imu2_z, imu3_x, imu3_y, imu3_z, imu4_x, imu4_y, imu4_z, timeImu1, timeImu2, timeImu3, timeImu4, tauX, tauY, tauN, timeTau, trueTauX, trueTauY, trueTauN, u1, u2, u3, u4, u5, u6, alpha1, alpha2, alpha3, alpha4, alpha5, alpha6, timeU, controlHelper1, controlHelper2, controlHelper3, controlHelper4, controlHelper5, controlHelper6, timeHelper] = readBags(pathName)
+# index1 = np.argmin(np.abs(np.array(time) - 500.0))
+# index2 = np.argmin(np.abs(np.array(timeTau) - 500.0))
+# costFunctionEta('Method 1', axEta, time[0:index1], etaX=x[0:index1], etaY=y, etaYaw=yaw, init=True)
+# costFunctionEta('Method 1', axEta, time[index1:-1], etaX=x[index1:-1], etaY=y, etaYaw=yaw, init=True)
+# costFunctionTau('Method 1', axTau, timeTau[0:index2], tauSurge=tauX[0:index2], tauSway=tauY, tauYaw=tauN, init=True)
+# costFunctionTau('Method 1', axTau, timeTau[index2:-1], tauSurge=tauX[index2:-1], tauSway=tauY, tauYaw=tauN, init=True)
+# # [axEta, J_eta] = costFunctionEta('Method 1', axEta, time, etaX=x, etaY=y, etaYaw=yaw, init=True)
+# # [axTau, J_tauuv] = costFunctionTau('Method 1', axTau, timeTau, tauSurge=tauX, tauSway=tauY, tauYaw=tauN, init=True)
+# # Jeta_array=np.resize(Jeta_array, (np.shape(Jeta_array)[0]+1, len(J_eta)))
+# # Jeta_array[-1] = J_eta
+# # Jtauuv_array = np.resize(Jtauuv_array, (np.shape(Jtauuv_array)[0]+1, len(J_tauuv)))
+# # Jtauuv_array[-1] = J_tauuv
+
+# fileName = 'pidController.bag'
+# pathName = "{0}/csad_dp_ws/bags/"+fileName
+# [title, time, x, y, z, roll, pitch, yaw, x_dot, y_dot, z_dot, roll_dot, pitch_dot, yaw_dot, biasX, biasY, biasYaw, time_hat, x_hat, y_hat, yaw_hat, x_dot_hat, y_dot_hat, yaw_dot_hat, bias_x_hat, bias_y_hat, bias_yaw_hat, waveElevation, waveLoadX, waveLoadY, waveLoadN, timeWave, imu1_x, imu1_y, imu1_z, imu2_x, imu2_y, imu2_z, imu3_x, imu3_y, imu3_z, imu4_x, imu4_y, imu4_z, timeImu1, timeImu2, timeImu3, timeImu4, tauX, tauY, tauN, timeTau, trueTauX, trueTauY, trueTauN, u1, u2, u3, u4, u5, u6, alpha1, alpha2, alpha3, alpha4, alpha5, alpha6, timeU, controlHelper1, controlHelper2, controlHelper3, controlHelper4, controlHelper5, controlHelper6, timeHelper] = readBags(pathName)
+# index1 = np.argmin(np.abs(np.array(time) - 500.0))
+# index2 = np.argmin(np.abs(np.array(timeTau) - 500.0))
+# costFunctionEta('Method 2', axEta, time[0:index1], etaX=x[0:index1], etaY=y, etaYaw=yaw, init=True)
+# costFunctionEta('Method 2', axEta, time[index1:-1], etaX=x[index1:-1], etaY=y, etaYaw=yaw, init=True)
+# costFunctionTau('Method 2', axTau, timeTau[0:index2], tauSurge=tauX[0:index2], tauSway=tauY, tauYaw=tauN, init=True)
+# costFunctionTau('Method 2', axTau, timeTau[index2:-1], tauSurge=tauX[index2:-1], tauSway=tauY, tauYaw=tauN, init=True)
+# # [axEta, J_eta] = costFunctionEta('Method 2', axEta, time, etaX=x, etaY=y, etaYaw=yaw)
+# # [axTau, J_tauuv] = costFunctionTau('Method 2', axTau, timeTau, tauSurge=tauX, tauSway=tauY, tauYaw=tauN)
+# # minLen = min(len(J_eta), np.shape(Jeta_array)[1])
+# # Jeta_array = np.vstack((Jeta_array[0:np.shape(Jeta_array)[0], 0:minLen], J_eta[0:minLen]))
+# # minLenTau = min(len(J_tauuv), np.shape(Jtauuv_array)[1])
+# # Jtauuv_array = np.vstack((Jtauuv_array[0:np.shape(Jtauuv_array)[0], 0:minLenTau], J_tauuv[0:minLenTau]))
+
+# fileName = 'accController.bag'
+# pathName = "{0}/csad_dp_ws/bags/"+fileName
+# [title, time, x, y, z, roll, pitch, yaw, x_dot, y_dot, z_dot, roll_dot, pitch_dot, yaw_dot, biasX, biasY, biasYaw, time_hat, x_hat, y_hat, yaw_hat, x_dot_hat, y_dot_hat, yaw_dot_hat, bias_x_hat, bias_y_hat, bias_yaw_hat, waveElevation, waveLoadX, waveLoadY, waveLoadN, timeWave, imu1_x, imu1_y, imu1_z, imu2_x, imu2_y, imu2_z, imu3_x, imu3_y, imu3_z, imu4_x, imu4_y, imu4_z, timeImu1, timeImu2, timeImu3, timeImu4, tauX, tauY, tauN, timeTau, trueTauX, trueTauY, trueTauN, u1, u2, u3, u4, u5, u6, alpha1, alpha2, alpha3, alpha4, alpha5, alpha6, timeU, controlHelper1, controlHelper2, controlHelper3, controlHelper4, controlHelper5, controlHelper6, timeHelper] = readBags(pathName)
+# index1 = np.argmin(np.abs(np.array(time) - 500.0))
+# index2 = np.argmin(np.abs(np.array(timeTau) - 500.0))
+# costFunctionEta('Method 3', axEta, time[0:index1], etaX=x[0:index1], etaY=y, etaYaw=yaw, init=True)
+# costFunctionEta('Method 3', axEta, time[index1:-1], etaX=x[index1:-1], etaY=y, etaYaw=yaw, init=True)
+# costFunctionTau('Method 3', axTau, timeTau[0:index2], tauSurge=tauX[0:index2], tauSway=tauY, tauYaw=tauN, init=True)
+# costFunctionTau('Method 3', axTau, timeTau[index2:-1], tauSurge=tauX[index2:-1], tauSway=tauY, tauYaw=tauN, init=True)
+
+# [axEta, J_eta] = costFunctionEta('Method 3', axEta, time, etaX=x, etaY=y, etaYaw=yaw)
+# [axTau, J_tauuv] = costFunctionTau('Method 3', axTau, timeTau, tauSurge=tauX, tauSway=tauY, tauYaw=tauN)
+# # minLen = min(len(J_eta), np.shape(Jeta_array)[1], minLen)
+# Jeta_array = np.vstack((Jeta_array[0:np.shape(Jeta_array)[0], 0:minLen], J_eta[0:minLen]))
+# minLenTau = min(len(J_tauuv), np.shape(Jtauuv_array)[1], minLenTau)
+# Jtauuv_array = np.vstack((Jtauuv_array[0:np.shape(Jtauuv_array)[0], 0:minLenTau], J_tauuv[0:minLenTau]))
+
+# fileName = 'addController.bag'
+# pathName = "{0}/csad_dp_ws/bags/"+fileName
+# [title, time, x, y, z, roll, pitch, yaw, x_dot, y_dot, z_dot, roll_dot, pitch_dot, yaw_dot, biasX, biasY, biasYaw, time_hat, x_hat, y_hat, yaw_hat, x_dot_hat, y_dot_hat, yaw_dot_hat, bias_x_hat, bias_y_hat, bias_yaw_hat, waveElevation, waveLoadX, waveLoadY, waveLoadN, timeWave, imu1_x, imu1_y, imu1_z, imu2_x, imu2_y, imu2_z, imu3_x, imu3_y, imu3_z, imu4_x, imu4_y, imu4_z, timeImu1, timeImu2, timeImu3, timeImu4, tauX, tauY, tauN, timeTau, trueTauX, trueTauY, trueTauN, u1, u2, u3, u4, u5, u6, alpha1, alpha2, alpha3, alpha4, alpha5, alpha6, timeU, controlHelper1, controlHelper2, controlHelper3, controlHelper4, controlHelper5, controlHelper6, timeHelper] = readBags(pathName)
+# index1 = np.argmin(np.abs(np.array(time) - 500.0))
+# index2 = np.argmin(np.abs(np.array(timeTau) - 500.0))
+# costFunctionEta('Method 4', axEta, time[0:index1], etaX=x[0:index1], etaY=y, etaYaw=yaw, init=True)
+# costFunctionEta('Method 4', axEta, time[index1:-1], etaX=x[index1:-1], etaY=y, etaYaw=yaw, init=True)
+# costFunctionTau('Method 4', axTau, timeTau[0:index2], tauSurge=tauX[0:index2], tauSway=tauY, tauYaw=tauN, init=True)
+# costFunctionTau('Method 4', axTau, timeTau[index2:-1], tauSurge=tauX[index2:-1], tauSway=tauY, tauYaw=tauN, init=True)
+# [axEta, J_eta] = costFunctionEta('Method 4', axEta, time, etaX=x, etaY=y, etaYaw=yaw)
+# [axTau, J_tauuv] = costFunctionTau('Method 4', axTau, timeTau, tauSurge=tauX, tauSway=tauY, tauYaw=tauN)
+# minLen = min(len(J_eta), np.shape(Jeta_array)[1], minLen)
+# Jeta_array = np.vstack((Jeta_array[0:np.shape(Jeta_array)[0], 0:minLen], J_eta[0:minLen]))
+# minLenTau = min(len(J_tauuv), np.shape(Jtauuv_array)[1], minLenTau)
+# Jtauuv_array = np.vstack((Jtauuv_array[0:np.shape(Jtauuv_array)[0], 0:minLenTau], J_tauuv[0:minLenTau]))
+
+
+# titles = ['Method 1', 'Method 2', 'Method 3', 'Method 4', 'Method 5']
+# index = np.argmin(np.abs(np.array(timeTau) - time[minLen]))
+# normalizeCost(time[0:minLen], titles, Jeta_array, 'eta')
+# normalizeCost(timeTau[0:index], titles, Jtauuv_array[:, 0:index], 'tau')
+# fileName = 'biasController_Hs006_Tp115.bag'
+# pathName = "{0}/csad_dp_ws/bags/"+fileName
+# [title, time, x, y, z, roll, pitch, yaw, x_dot, y_dot, z_dot, roll_dot, pitch_dot, yaw_dot, biasX, biasY, biasYaw, time_hat, x_hat, y_hat, yaw_hat, x_dot_hat, y_dot_hat, yaw_dot_hat, bias_x_hat, bias_y_hat, bias_yaw_hat, waveElevation, waveLoadX, waveLoadY, waveLoadN, timeWave, imu1_x, imu1_y, imu1_z, imu2_x, imu2_y, imu2_z, imu3_x, imu3_y, imu3_z, imu4_x, imu4_y, imu4_z, timeImu1, timeImu2, timeImu3, timeImu4, tauX, tauY, tauN, timeTau, trueTauX, trueTauY, trueTauN, u1, u2, u3, u4, u5, u6, alpha1, alpha2, alpha3, alpha4, alpha5, alpha6, timeU, controlHelper1, controlHelper2, controlHelper3, controlHelper4, controlHelper5, controlHelper6, timeHelper] = readBags(pathName)
+# axEta = costFunctionEta('Method 4', axEta, time, etaX=x, etaY=y, etaYaw=yaw)
+# axTau = costFunctionTau('Method 4', axTau, timeTau, tauSurge=tauX, tauSway=tauY, tauYaw=tauN)
+
+plt.show()
 
 """Plotting states"""
 fig0, ax0 = plt.subplots(3,1)
@@ -327,6 +408,7 @@ ax2[2,0].set(xlabel='time [s]')
 for ax in ax2[:,0]:
     ax.ticklabel_format(axis='y', style='scientific', scilimits=(0,0))
     ax.legend(loc='lower right')
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
 ax2[0,1].plot(time, x_dot, label='u')
 ax2[0,1].plot(time_hat, x_dot_hat, 'r--', label='u_hat')
 ax2[0,1].grid()
@@ -343,12 +425,14 @@ ax2[2,1].set(xlabel='time [s]')
 for ax in ax2[:,1]:
     ax.ticklabel_format(axis='y', style='scientific', scilimits=(0,0))
     ax.legend(loc='upper right')
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
 
 
 """Plotting wave elevation"""
 fig3, ax3 = plt.subplots(2,2)
 fig3.suptitle(title)
-ax3[0,0].plot(timeWave[0:-2], waveElevation[0:], label="Wave elevation")
+lmin = min(len(timeWave), len(waveElevation))
+ax3[0,0].plot(timeWave[0:lmin], waveElevation[0:lmin], label="Wave elevation")
 ax3[0,0].set(ylabel='[m]')
 ax3[0,0].grid()
 ax3[1,0].plot(timeWave, waveLoadX, label="Wave load X")
@@ -358,6 +442,7 @@ ax3[1,0].set(xlabel='time [s]')
 for ax in ax3[:,0]:
     ax.ticklabel_format(axis='y', style='scientific', scilimits=(0,0))
     ax.legend(loc='upper right')
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
 
 ax3[0,1].plot(timeWave, waveLoadY, label="Wave load Y")
 ax3[0,1].set(ylabel='[N]')
@@ -369,6 +454,7 @@ ax3[1,1].set(xlabel='time [s]')
 for ax in ax3[:,1]:
     ax.ticklabel_format(axis='y', style='scientific', scilimits=(0,0))
     ax.legend(loc='upper right')
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
 
 """Plotting controller output"""
 fig, ax4 = plt.subplots(3,1)
@@ -396,6 +482,7 @@ ax4[2].grid()
 for ax in ax4:
     ax.ticklabel_format(axis='y', style='scientific', scilimits=(0,0))
     ax.legend(loc='upper right')
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
 
 
 [f, sp] = signal.welch(waveElevation, fs=(timeWave[0]-timeWave[-1]/len(timeWave)))
@@ -430,33 +517,33 @@ ax5[2].plot(timeImu4, imu4_z)
 ax5[2].grid()
 
 
-accX = [0.0]
-accY = [0.0]
-accZ = [0.0]
-dt = (time[-1]-time[0])/len(time)
-count = 0
-for i in range(1,len(x)):
-    accX.append((x_dot[i]-x_dot[i-1])/dt)
-print(time[0])
-step = time[0] - timeHelper[0]
+# accX = [0.0]
+# accY = [0.0]
+# accZ = [0.0]
+# dt = (time[-1]-time[0])/len(time)
+# count = 0
+# for i in range(1,len(x)):
+#     accX.append((x_dot[i]-x_dot[i-1])/dt)
+# print(time[0])
+# step = time[0] - timeHelper[0]
 
-t = time-(step*np.ones(len(time)))
-
-
-f = np.fft.rfftfreq(len(accX), (1.0/dt)/2.0)
-FFT = np.fft.rfft(accX)
-FFTmean = np.mean(np.abs(FFT))
-indices = FFT > FFTmean
-FFT2 = FFT*indices
-rep = np.fft.irfft(FFT2)
+# t = time-(step*np.ones(len(time)))
 
 
-fig6, ax6 = plt.subplots(3,1)
-ax6[0].plot(timeHelper, controlHelper1)
-ax6[0].plot(t, accX)
-ax6[1].plot(t[0:-1], rep)
-ax6[2].plot(f, np.abs(FFT))
-ax6[2].axhline(y=FFTmean, color='k', linestyle='--')
+# f = np.fft.rfftfreq(len(accX), (1.0/dt)/2.0)
+# FFT = np.fft.rfft(accX)
+# FFTmean = np.mean(np.abs(FFT))
+# indices = FFT > FFTmean
+# FFT2 = FFT*indices
+# rep = np.fft.irfft(FFT2)
+
+
+# fig6, ax6 = plt.subplots(3,1)
+# ax6[0].plot(timeHelper, controlHelper1)
+# ax6[0].plot(t, accX)
+# ax6[1].plot(t[0:-1], rep)
+# ax6[2].plot(f, np.abs(FFT))
+# ax6[2].axhline(y=FFTmean, color='k', linestyle='--')
 
 
 
@@ -467,7 +554,7 @@ plt.show()
     
 
     
-bag.close()
+
 
 
 

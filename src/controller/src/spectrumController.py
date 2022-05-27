@@ -59,10 +59,10 @@ class SpectrumController:
             elif freqIndex[-1] != np.argmin(np.abs(f - i)):
                 freqIndex.append(np.argmin(np.abs(f - i)))
         
-        self.S_hat_Index = freqIndex[:]    
+        self.S_hat_Index = freqIndex[:]
         
-        self.shiftRegister = np.resize(self.shiftRegister, (np.shape(self.shiftRegister)[0]+1, len(currentSpectrum)))
-        self.shiftRegister[-1] = currentSpectrum
+        minLen = min(np.shape(self.shiftRegister)[1], currentSpectrum)
+        self.shiftRegister = np.vstack((self.shiftRegister[0:np.shape(self.shiftRegister)[0], 0:minLen], currentSpectrum[0:minLen]))
         
         self.estimateSpectrum()
         self.isUpdated = True
@@ -86,7 +86,7 @@ class SpectrumController:
         
         T = data.driftForceAmpX[:, headingIndex]
         
-        # tau_wave = 2.0*self.S_hat[self.S_hat_Index]*driftForceAmpX[]
+        tau_wave = 2.0*self.S_hat[self.S_hat_Index]*T
         
         R = Rzyx(eta_hat[2])
         R_inv = np.transpose(R)
